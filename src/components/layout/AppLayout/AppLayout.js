@@ -12,7 +12,8 @@ const routeTitles = {
   '/fumigaciones': 'Fumigaciones',
   '/campos': 'Campos',
   '/almacenes': 'Almacenes',
-  '/usuarios': 'Usuarios'
+  '/usuarios': 'Usuarios',
+  '/cosechas': 'Cosechas'  // Nueva ruta
 };
 
 const AppLayout = () => {
@@ -47,6 +48,7 @@ const AppLayout = () => {
       <Sidebar 
         collapsed={sidebarCollapsed} 
         toggleSidebar={toggleSidebar} 
+        mobileOpen={mobileOpen}
       />
       
       {/* Overlay para dispositivos móviles */}

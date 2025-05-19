@@ -9,9 +9,11 @@ const DashboardPanel = ({
   expiringSoonProducts, 
   pendingTransfers, 
   pendingFumigations, 
+  upcomingHarvests,
   recentActivities,
   loading,
-  error
+  error,
+  onRefresh
 }) => {
   // Función para formatear una fecha
   const formatDate = (date) => {
@@ -59,6 +61,10 @@ const DashboardPanel = ({
         chipClass = 'chip-danger';
         statusText = 'Cancelado';
         break;
+      case 'scheduled':
+        chipClass = 'chip-primary';
+        statusText = 'Programado';
+        break;
       default:
         chipClass = 'chip-primary';
         statusText = status;
@@ -80,12 +86,25 @@ const DashboardPanel = ({
   // Render error state
   if (error) {
     return (
-      <div className="alert alert-error">{error}</div>
+      <div className="alert alert-error">
+        <i className="fas fa-exclamation-circle"></i> {error}
+        <button className="btn btn-sm" onClick={onRefresh}>
+          <i className="fas fa-sync-alt"></i> Reintentar
+        </button>
+      </div>
     );
   }
 
   return (
     <div className="dashboard-container">
+      {/* Barra de acciones */}
+      <div className="dashboard-actions">
+        <h2 className="dashboard-title">Panel Principal</h2>
+        <button className="btn btn-icon" onClick={onRefresh} title="Actualizar datos">
+          <i className="fas fa-sync-alt"></i>
+        </button>
+      </div>
+
       {/* Estadísticas */}
       <div className="stats-grid">
         <div className="stat-card primary">
@@ -234,49 +253,6 @@ const DashboardPanel = ({
 
       {/* Segunda fila de paneles */}
       <div className="dashboard-panels">
-        {/* Transferencias pendientes */}
-        <div className="dashboard-panel">
-          <div className="panel-header">
-            <h3 className="panel-title">
-              <i className="fas fa-exchange-alt"></i>
-              Transferencias Pendientes
-            </h3>
-          </div>
-          <div className="panel-content">
-            {pendingTransfers.length > 0 ? (
-              <ul className="item-list">
-                {pendingTransfers.map((transfer) => (
-                  <li key={transfer.id} className="list-item">
-                    <div className="list-item-title">
-                      {transfer.sourceWarehouseName} → {transfer.targetWarehouseName}
-                    </div>
-                    <div className="list-item-subtitle">
-                      <span>
-                        <i className="fas fa-calendar"></i>
-                        Fecha: {formatDate(transfer.createdAt)}
-                      </span>
-                      <span>
-                        <i className="fas fa-boxes"></i>
-                        Productos: {transfer.products.length}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="list-empty">
-                <i className="fas fa-check-circle"></i>
-                <p>No hay transferencias pendientes.</p>
-              </div>
-            )}
-          </div>
-          <div className="panel-footer">
-            <Link to="/transferencias" className="btn btn-outline">
-              Ver todas las transferencias
-            </Link>
-          </div>
-        </div>
-
         {/* Fumigaciones pendientes */}
         <div className="dashboard-panel">
           <div className="panel-header">
@@ -323,6 +299,60 @@ const DashboardPanel = ({
             </Link>
           </div>
         </div>
+
+        {/* Cosechas próximas - NUEVA SECCIÓN */}
+        <div className="dashboard-panel">
+          <div className="panel-header">
+            <h3 className="panel-title">
+              <i className="fas fa-tractor"></i>
+              Cosechas Próximas
+            </h3>
+          </div>
+          <div className="panel-content">
+            {upcomingHarvests && upcomingHarvests.length > 0 ? (
+              <ul className="item-list">
+                {upcomingHarvests.map((harvest) => (
+                  <li key={harvest.id} className="list-item">
+                    <div className="list-item-title">
+                      {harvest.establishment} - Lote: {harvest.lot}
+                      {renderStatusChip(harvest.status)}
+                    </div>
+                    <div className="list-item-subtitle">
+                      <span>
+                        <i className="fas fa-calendar"></i>
+                        Fecha planificada: {formatDate(harvest.plannedDate)}
+                      </span>
+                      <span>
+                        <i className="fas fa-seedling"></i>
+                        Cultivo: {harvest.crop}
+                      </span>
+                      <span>
+                        <i className="fas fa-ruler-combined"></i>
+                        Superficie: {harvest.surface} ha
+                      </span>
+                      {harvest.estimatedYield && (
+                        <span>
+                          <i className="fas fa-balance-scale"></i>
+                          Rendimiento est.: {harvest.estimatedYield} {harvest.yieldUnit}/ha
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="list-empty">
+                <i className="fas fa-info-circle"></i>
+                <p>No hay cosechas programadas próximamente.</p>
+              </div>
+            )}
+          </div>
+          <div className="panel-footer">
+            <Link to="/cosechas" className="btn btn-outline">
+              Ver todas las cosechas
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Actividades recientes */}
@@ -341,6 +371,7 @@ const DashboardPanel = ({
                   {activity.type === 'transfer' && <i className="fas fa-exchange-alt"></i>}
                   {activity.type === 'purchase' && <i className="fas fa-shopping-cart"></i>}
                   {activity.type === 'fumigation' && <i className="fas fa-spray-can"></i>}
+                  {activity.type === 'harvest' && <i className="fas fa-tractor"></i>}
                 </div>
                 <div className="activity-content">
                   <div className="activity-title">

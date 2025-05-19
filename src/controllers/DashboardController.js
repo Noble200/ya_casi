@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useStock } from '../../contexts/StockContext';
+import { useStock } from '../contexts/StockContext';
+import { useHarvests } from '../contexts/HarvestContext'; // Nuevo contexto para cosechas
 
 // Controlador del Dashboard (lógica separada de la presentación)
 const useDashboardController = () => {
@@ -8,11 +9,18 @@ const useDashboardController = () => {
     warehouses, 
     transfers, 
     fumigations, 
-    loading, 
-    error, 
+    loading: stockLoading, 
+    error: stockError, 
     loadProducts,
     loadWarehouses
   } = useStock();
+  
+  const {
+    harvests,
+    loading: harvestsLoading,
+    error: harvestsError,
+    loadHarvests
+  } = useHarvests(); // Usar el contexto de cosechas
   
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -20,14 +28,18 @@ const useDashboardController = () => {
     expiringCount: 0,
     warehouseCount: 0,
     pendingTransfersCount: 0,
-    pendingFumigationsCount: 0
+    pendingFumigationsCount: 0,
+    upcomingHarvestsCount: 0
   });
   
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [expiringSoonProducts, setExpiringSoonProducts] = useState([]);
   const [pendingTransfers, setPendingTransfers] = useState([]);
   const [pendingFumigations, setPendingFumigations] = useState([]);
+  const [upcomingHarvests, setUpcomingHarvests] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   // Calcular estadísticas y listas filtradas
   const processData = useCallback(() => {
@@ -63,7 +75,26 @@ const useDashboardController = () => {
     
     // Obtener fumigaciones pendientes
     const pendingFumigs = fumigations
-      .filter(fumigation => fumigation.status === 'pending')
+      .filter(fumigation => fumigation.status === 'pending' || fumigation.status === 'scheduled')
+      .slice(0, 5);
+    
+    // Obtener cosechas próximas
+    const ninetyDaysFromNow = new Date();
+    ninetyDaysFromNow.setDate(currentDate.getDate() + 90);
+    
+    const upcoming = (harvests || [])
+      .filter(harvest => {
+        const plannedDate = harvest.plannedDate
+          ? new Date(harvest.plannedDate.seconds ? harvest.plannedDate.seconds * 1000 : harvest.plannedDate)
+          : null;
+        return plannedDate && plannedDate > currentDate && plannedDate < ninetyDaysFromNow &&
+               (harvest.status === 'pending' || harvest.status === 'scheduled');
+      })
+      .sort((a, b) => {
+        const dateA = a.plannedDate.seconds ? a.plannedDate.seconds * 1000 : a.plannedDate;
+        const dateB = b.plannedDate.seconds ? b.plannedDate.seconds * 1000 : b.plannedDate;
+        return new Date(dateA) - new Date(dateB);
+      })
       .slice(0, 5);
     
     // Generar actividades recientes
@@ -81,6 +112,13 @@ const useDashboardController = () => {
         date: fumigation.updatedAt ? new Date(fumigation.updatedAt.seconds * 1000) : new Date(),
         description: `Fumigación en ${fumigation.establishment} (${fumigation.surface} ha)`,
         status: fumigation.status
+      })),
+      ...(harvests || []).map(harvest => ({
+        type: 'harvest',
+        id: harvest.id,
+        date: harvest.updatedAt ? new Date(harvest.updatedAt.seconds * 1000) : new Date(),
+        description: `Cosecha de ${harvest.crop} en ${harvest.establishment} (${harvest.surface} ha)`,
+        status: harvest.status
       }))
     ];
     
@@ -94,6 +132,7 @@ const useDashboardController = () => {
     setExpiringSoonProducts(expiringSoon);
     setPendingTransfers(pendingTransfs);
     setPendingFumigations(pendingFumigs);
+    setUpcomingHarvests(upcoming);
     setRecentActivities(recent);
     
     // Actualizar estadísticas
@@ -103,9 +142,10 @@ const useDashboardController = () => {
       expiringCount: expiringSoon.length,
       warehouseCount: warehouses.length,
       pendingTransfersCount: pendingTransfs.length,
-      pendingFumigationsCount: pendingFumigs.length
+      pendingFumigationsCount: pendingFumigs.length,
+      upcomingHarvestsCount: upcoming.length
     });
-  }, [products, warehouses, transfers, fumigations]);
+  }, [products, warehouses, transfers, fumigations, harvests]);
   
   // Función para obtener el nombre de un almacén por ID
   const getWarehouseName = (warehouseId) => {
@@ -113,24 +153,40 @@ const useDashboardController = () => {
     return warehouse ? warehouse.name : 'Almacén desconocido';
   };
   
+  // Evaluar y establecer estados de carga y error
+  useEffect(() => {
+    setLoading(stockLoading || harvestsLoading);
+    
+    if (stockError) {
+      setError(stockError);
+    } else if (harvestsError) {
+      setError(harvestsError);
+    } else {
+      setError('');
+    }
+  }, [stockLoading, harvestsLoading, stockError, harvestsError]);
+  
   // Cargar datos cuando cambien las dependencias
   useEffect(() => {
     if (!loading) {
       processData();
     }
-  }, [products, warehouses, transfers, fumigations, loading, processData]);
+  }, [products, warehouses, transfers, fumigations, harvests, loading, processData]);
   
   // Función para recargar datos
   const refreshData = useCallback(async () => {
     try {
+      setError('');
       await Promise.all([
         loadProducts(),
-        loadWarehouses()
+        loadWarehouses(),
+        loadHarvests()
       ]);
     } catch (err) {
       console.error('Error al recargar datos:', err);
+      setError('Error al cargar datos: ' + err.message);
     }
-  }, [loadProducts, loadWarehouses]);
+  }, [loadProducts, loadWarehouses, loadHarvests]);
   
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -144,6 +200,7 @@ const useDashboardController = () => {
     expiringSoonProducts,
     pendingTransfers,
     pendingFumigations,
+    upcomingHarvests,
     recentActivities,
     loading,
     error,

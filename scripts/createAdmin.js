@@ -4,7 +4,7 @@ const { getAuth, createUserWithEmailAndPassword } = require('firebase/auth');
 const { getFirestore, doc, setDoc, collection, query, where, getDocs } = require('firebase/firestore');
 const promptSync = require('prompt-sync')();
 
-// Configura tu aplicación Firebase
+// Configuración de Firebase web con las claves existentes
 const firebaseConfig = {
   apiKey: "AIzaSyCeGZp5Pna87490Ns8Y_5kCtEjxw12VI2g",
   authDomain: "appja-b8f49.firebaseapp.com",
@@ -13,17 +13,6 @@ const firebaseConfig = {
   messagingSenderId: "276671305114",
   appId: "1:276671305114:web:121705036997ea74bc1623"
 };
-
-// Si no se han definido las variables de entorno, usar valores predeterminados
-if (!firebaseConfig.apiKey) {
-  console.log('No se encontraron variables de entorno. Por favor, ingresa los datos de configuración manualmente:');
-  firebaseConfig.apiKey = promptSync('API Key: ');
-  firebaseConfig.authDomain = promptSync('Auth Domain: ');
-  firebaseConfig.projectId = promptSync('Project ID: ');
-  firebaseConfig.storageBucket = promptSync('Storage Bucket: ');
-  firebaseConfig.messagingSenderId = promptSync('Messaging Sender ID: ');
-  firebaseConfig.appId = promptSync('App ID: ');
-}
 
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
@@ -73,7 +62,8 @@ async function createAdmin() {
         fields: true,
         warehouses: true,
         reports: true,
-        users: true
+        users: true,
+        harvests: true // Agregar permiso para cosechas
       },
       createdAt: new Date(),
       updatedAt: new Date()

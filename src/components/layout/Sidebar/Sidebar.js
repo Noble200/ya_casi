@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import './sidebar.css';
 
-const Sidebar = ({ collapsed, toggleSidebar }) => {
+const Sidebar = ({ collapsed, toggleSidebar, mobileOpen }) => {
   const location = useLocation();
   const { currentUser, hasPermission } = useAuth();
   
@@ -34,6 +34,12 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
       permission: 'fumigations'
     },
     { 
+      text: 'Cosechas', 
+      icon: 'fas fa-tractor', 
+      path: '/cosechas',
+      permission: 'harvests'
+    },
+    { 
       text: 'Campos', 
       icon: 'fas fa-seedling', 
       path: '/campos',
@@ -54,7 +60,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
   ];
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <i className="fas fa-leaf sidebar-logo-icon"></i>
@@ -80,6 +86,12 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
           )
         ))}
       </nav>
+
+      <div className="sidebar-footer">
+        <div className="app-version">
+          v1.0.0
+        </div>
+      </div>
     </aside>
   );
 };
