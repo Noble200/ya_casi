@@ -58,27 +58,67 @@ const Sidebar = ({ collapsed, toggleSidebar, mobileOpen }) => {
       permission: 'users'
     }
   ];
+  
+  // Agrupar las opciones por categorías
+  const menuCategories = [
+    {
+      title: 'Principal',
+      options: [menuOptions[0]] // Dashboard
+    },
+    {
+      title: 'Inventario',
+      options: [menuOptions[1], menuOptions[2]] // Productos y Transferencias
+    },
+    {
+      title: 'Producción',
+      options: [menuOptions[3], menuOptions[4], menuOptions[5]] // Fumigaciones, Cosechas y Campos
+    },
+    {
+      title: 'Administración',
+      options: [menuOptions[6], menuOptions[7]] // Almacenes y Usuarios
+    }
+  ];
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <i className="fas fa-leaf sidebar-logo-icon"></i>
+        <Link to="/" className="sidebar-logo">
+          <div className="sidebar-logo-icon">
+            <i className="fas fa-leaf"></i>
+          </div>
           <span className="sidebar-logo-text">AgroGestión</span>
-        </div>
-        <button className="sidebar-toggle" onClick={toggleSidebar}>
+        </Link>
+        <button className="sidebar-toggle" onClick={toggleSidebar} title={collapsed ? 'Expandir menú' : 'Colapsar menú'}>
           <i className="fas fa-chevron-left"></i>
         </button>
       </div>
       
       <nav className="sidebar-menu">
-        {menuOptions.map((option) => (
-          // Sólo mostrar opciones a las que el usuario tiene permiso
+        {!collapsed && menuCategories.map((category, index) => (
+          <div key={index} className="sidebar-category">
+            <div className="sidebar-category-title">{category.title}</div>
+            {category.options.map((option) => (
+              hasPermission(option.permission) && (
+                <Link 
+                  key={option.path}
+                  to={option.path}
+                  className={`sidebar-menu-item ${location.pathname === option.path ? 'active' : ''}`}
+                >
+                  <i className={`${option.icon} sidebar-menu-icon`}></i>
+                  <span className="sidebar-menu-text">{option.text}</span>
+                </Link>
+              )
+            ))}
+          </div>
+        ))}
+
+        {collapsed && menuOptions.map((option) => (
           hasPermission(option.permission) && (
             <Link 
               key={option.path}
               to={option.path}
               className={`sidebar-menu-item ${location.pathname === option.path ? 'active' : ''}`}
+              title={option.text}
             >
               <i className={`${option.icon} sidebar-menu-icon`}></i>
               <span className="sidebar-menu-text">{option.text}</span>

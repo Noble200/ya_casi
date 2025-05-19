@@ -92,6 +92,7 @@ const Login = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={loading}
                   placeholder="Ingresa tu nombre de usuario"
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -107,6 +108,7 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     placeholder="Ingresa tu contraseña"
+                    autoComplete="current-password"
                     required
                   />
                   <button 
@@ -121,17 +123,21 @@ const Login = () => {
               
               <button
                 type="submit"
-                className="btn btn-primary login-button"
+                className="login-button"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <div className="spinner-border spinner-border-sm mr-2"></div>
+                    <span className="spinner-border spinner-border-sm mr-2"></span>
                     Iniciando sesión...
                   </>
                 ) : 'Iniciar Sesión'}
               </button>
             </form>
+            
+            <div className="login-help">
+              <a href="#forgot-password">¿Olvidaste tu contraseña?</a>
+            </div>
           </div>
           
           <div className="login-footer">

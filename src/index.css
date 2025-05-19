@@ -1,13 +1,26 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* index.css - Importación de todos los estilos de la aplicación */
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
+/* Importar el archivo de variables CSS primero */
+@import './styles/variables.css';
+
+/* Estilos globales */
+@import './styles/global.css';
+
+/* Componentes UI comunes */
+@import './styles/buttons.css';
+@import './styles/forms.css';
+@import './styles/alerts.css';
+@import './styles/tables.css';
+
+/* Componentes de layout */
+@import './components/layout/AppLayout/appLayout.css';
+@import './components/layout/Sidebar/sidebar.css';
+@import './components/layout/Header/header.css';
+
+/* Páginas */
+@import './pages/Login/login.css';
+@import './components/panels/Dashboard/dashboard.css';
+@import './components/panels/Harvests/harvests.css';
+
+/* Importar Font Awesome para iconos (CDN) */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');

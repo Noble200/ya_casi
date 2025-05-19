@@ -2,13 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './dashboard.css';
 
-// Componente visual para el Dashboard
-const DashboardPanel = ({ 
-  stats, 
-  lowStockProducts, 
-  expiringSoonProducts, 
-  pendingTransfers, 
-  pendingFumigations, 
+// Componente visual mejorado para el Dashboard
+const DashboardPanel = ({
+  stats,
+  lowStockProducts,
+  expiringSoonProducts,
+  pendingTransfers,
+  pendingFumigations,
   upcomingHarvests,
   recentActivities,
   loading,
@@ -112,10 +112,12 @@ const DashboardPanel = ({
             <div className="stat-icon primary">
               <i className="fas fa-box"></i>
             </div>
-            <h3 className="stat-title">Productos</h3>
+            <div className="stat-content">
+              <h3 className="stat-title">Total Productos</h3>
+              <div className="stat-value">{stats.totalProducts}</div>
+              <p className="stat-description">Inventario completo</p>
+            </div>
           </div>
-          <div className="stat-value">{stats.totalProducts}</div>
-          <p className="stat-description">Total en inventario</p>
         </div>
 
         <div className="stat-card warning">
@@ -123,10 +125,12 @@ const DashboardPanel = ({
             <div className="stat-icon warning">
               <i className="fas fa-exclamation-triangle"></i>
             </div>
-            <h3 className="stat-title">Stock Bajo</h3>
+            <div className="stat-content">
+              <h3 className="stat-title">Stock Bajo</h3>
+              <div className="stat-value">{stats.lowStockCount}</div>
+              <p className="stat-description">Productos bajo mínimo</p>
+            </div>
           </div>
-          <div className="stat-value">{stats.lowStockCount}</div>
-          <p className="stat-description">Productos bajo mínimo</p>
         </div>
 
         <div className="stat-card success">
@@ -134,10 +138,12 @@ const DashboardPanel = ({
             <div className="stat-icon success">
               <i className="fas fa-warehouse"></i>
             </div>
-            <h3 className="stat-title">Almacenes</h3>
+            <div className="stat-content">
+              <h3 className="stat-title">Almacenes</h3>
+              <div className="stat-value">{stats.warehouseCount}</div>
+              <p className="stat-description">Almacenes activos</p>
+            </div>
           </div>
-          <div className="stat-value">{stats.warehouseCount}</div>
-          <p className="stat-description">Almacenes activos</p>
         </div>
 
         <div className="stat-card info">
@@ -145,10 +151,12 @@ const DashboardPanel = ({
             <div className="stat-icon info">
               <i className="fas fa-exchange-alt"></i>
             </div>
-            <h3 className="stat-title">Transferencias</h3>
+            <div className="stat-content">
+              <h3 className="stat-title">Transferencias</h3>
+              <div className="stat-value">{stats.pendingTransfersCount}</div>
+              <p className="stat-description">Pendientes de completar</p>
+            </div>
           </div>
-          <div className="stat-value">{stats.pendingTransfersCount}</div>
-          <p className="stat-description">Pendientes</p>
         </div>
       </div>
 
@@ -262,12 +270,13 @@ const DashboardPanel = ({
             </h3>
           </div>
           <div className="panel-content">
-            {pendingFumigations.length > 0 ? (
+            {pendingFumigations && pendingFumigations.length > 0 ? (
               <ul className="item-list">
                 {pendingFumigations.map((fumigation) => (
                   <li key={fumigation.id} className="list-item">
                     <div className="list-item-title">
                       {fumigation.establishment} - Lote: {fumigation.lot}
+                      {renderStatusChip(fumigation.status)}
                     </div>
                     <div className="list-item-subtitle">
                       <span>
@@ -300,7 +309,7 @@ const DashboardPanel = ({
           </div>
         </div>
 
-        {/* Cosechas próximas - NUEVA SECCIÓN */}
+        {/* Cosechas próximas */}
         <div className="dashboard-panel">
           <div className="panel-header">
             <h3 className="panel-title">
@@ -364,7 +373,7 @@ const DashboardPanel = ({
           </h3>
         </div>
         <div className="activity-list">
-          {recentActivities.length > 0 ? (
+          {recentActivities && recentActivities.length > 0 ? (
             recentActivities.map((activity, index) => (
               <div key={index} className="activity-item">
                 <div className={`activity-icon ${activity.type}`}>

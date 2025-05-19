@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useStock } from '../contexts/StockContext';
-import { useHarvests } from '../contexts/HarvestContext'; // Nuevo contexto para cosechas
+import { useHarvests } from '../contexts/HarvestContext'; 
 
 // Controlador del Dashboard (lógica separada de la presentación)
 const useDashboardController = () => {
