@@ -1,4 +1,4 @@
-// src/components/panels/Harvests/HarvestsPanel.js - Panel completo de cosechas
+// src/components/panels/Harvests/HarvestsPanel.js - Panel completo de cosechas con la lupa reposicionada
 import React from 'react';
 import './harvests.css';
 import HarvestDialog from './HarvestDialog';
@@ -107,7 +107,7 @@ const HarvestsPanel = ({
         </div>
       </div>
 
-      {/* Barra de filtros y búsqueda */}
+      {/* Barra de filtros y búsqueda - MODIFICADO */}
       <div className="filters-container">
         <div className="filters-group">
           <div className="filter-item">
@@ -185,16 +185,19 @@ const HarvestsPanel = ({
           </div>
         </div>
         
+        {/* AQUÍ ESTÁ LA MODIFICACIÓN DEL BUSCADOR - INICIO */}
         <div className="search-container">
-          <div className="search-input">
-            <i className="fas fa-search"></i>
+          <div className="search-input-wrapper">
+            <i className="fas fa-search search-icon"></i>
             <input
               type="text"
               placeholder="Buscar cosechas..."
+              className="form-control search-input"
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
         </div>
+        {/* AQUÍ ESTÁ LA MODIFICACIÓN DEL BUSCADOR - FIN */}
       </div>
 
       {/* Mostrar mensaje de error si existe */}

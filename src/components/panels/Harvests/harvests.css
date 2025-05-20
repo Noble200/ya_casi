@@ -868,3 +868,129 @@
   background-color: rgba(244  , 67, 54, 0.1);
   color: var(--danger);
 }
+
+.gestión-cosechas {
+  padding: 15px;
+  font-family: Arial, sans-serif;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.btn-nueva-cosecha {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.btn-nueva-cosecha i {
+  margin-right: 5px;
+}
+
+.filters-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 15px;
+}
+
+.filters-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  flex-grow: 1;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-item label {
+  font-size: 14px;
+  color: #666;
+}
+
+.select-filter, .date-input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.date-range {
+  grid-column: span 2;
+}
+
+.date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-inputs span {
+  color: #666;
+}
+
+/* Estilos específicos para el buscador reposicionado */
+.search-container {
+  /* Ajustamos el contenedor para que tenga suficiente espacio */
+  min-width: 220px;
+  width: auto;
+}
+
+.search-input-wrapper {
+  /* Posicionamiento relativo para colocar el ícono */
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  /* Posicionamiento absoluto del icono */
+  position: absolute;
+  left: 10px;
+  color: #666;
+  z-index: 1;
+}
+
+.search-input {
+  /* Ajuste del padding para hacer espacio al icono */
+  padding: 8px 8px 8px 35px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+  }
+
+  .search-container {
+    width: 100%;
+  }
+
+  .filters-group {
+    grid-template-columns: 1fr;
+  }
+
+  .date-range {
+    grid-column: span 1;
+  }
+}
