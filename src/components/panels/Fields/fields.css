@@ -1,4 +1,166 @@
-/* fields.css - Estilos para la sección de gestión de campos y lotes */
+/* Estilos para la vista detallada de campos */
+.field-detail-dialog-body {
+  padding: 0;
+  overflow: auto;
+}
+
+.field-detail-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-summary {
+  padding: var(--spacing-lg);
+}
+
+.field-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+}
+
+.field-summary-title {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.field-summary-title i {
+  color: var(--primary);
+  margin-right: var(--spacing-sm);
+  font-size: 1.2em;
+}
+
+.field-summary-stats {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.summary-stat {
+  text-align: center;
+  min-width: 100px;
+}
+
+.summary-stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+}
+
+.summary-stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.field-actions-bar {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.field-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xxs) var(--spacing-sm);
+  border-radius: var(--border-radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: var(--spacing-sm);
+}
+
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.lots-section {
+  border-top: 1px solid var(--gray-200);
+  padding: var(--spacing-lg);
+}
+
+.lots-table-container {
+  overflow-x: auto;
+  margin-top: var(--spacing-md);
+}
+
+.lots-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lots-table th {
+  background-color: var(--gray-50);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.lots-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: middle;
+}
+
+.lots-table tr:hover {
+  background-color: var(--gray-50);
+}
+
+.lots-table tr:last-child td {
+  border-bottom: none;
+}
+
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+  gap: var(--spacing-md);
+}
+
+@media (max-width: 768px) {
+  .fields-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+  
+  .filters-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+  
+  .search-container {
+    max-width: none;
+  }
+  
+  .dialog {
+    max-width: none;
+    margin: var(--spacing-sm);
+  }
+  
+  .field-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .field-summary-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}/* fields.css - Estilos para la sección de gestión de campos y lotes */
 .fields-container {
   padding: var(--spacing-md);
 }
@@ -566,6 +728,26 @@
   font-size: var(--font-size-xs);
 }
 
+.spinner-border-sm {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 0.15em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
+@keyframes spinner-border {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Media queries */
 @media (max-width: 992px) {
   .fields-grid {
@@ -581,25 +763,133 @@
   }
 }
 
-@media (max-width: 768px) {
-  .fields-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-md);
-  }
-  
-  .filters-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacing-md);
-  }
-  
-  .search-container {
-    max-width: none;
-  }
-  
-  .dialog {
-    max-width: none;
-    margin: var(--spacing-sm);
-  }
+/* Estilos para la vista detallada de campos */
+.field-detail-dialog-body {
+  padding: 0;
+  overflow: auto;
+}
+
+.field-detail-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-summary {
+  padding: var(--spacing-lg);
+}
+
+.field-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+}
+
+.field-summary-title {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.field-summary-title i {
+  color: var(--primary);
+  margin-right: var(--spacing-sm);
+  font-size: 1.2em;
+}
+
+.field-summary-stats {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.summary-stat {
+  text-align: center;
+  min-width: 100px;
+}
+
+.summary-stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--primary);
+}
+
+.summary-stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.field-actions-bar {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+}
+
+.field-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xxs) var(--spacing-sm);
+  border-radius: var(--border-radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: var(--spacing-sm);
+}
+
+.dialog-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.lots-section {
+  border-top: 1px solid var(--gray-200);
+  padding: var(--spacing-lg);
+}
+
+.lots-table-container {
+  overflow-x: auto;
+  margin-top: var(--spacing-md);
+}
+
+.lots-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lots-table th {
+  background-color: var(--gray-50);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.lots-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: middle;
+}
+
+.lots-table tr:hover {
+  background-color: var(--gray-50);
+}
+
+.lots-table tr:last-child td {
+  border-bottom: none;
+}
+
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+  gap: var(--spacing-md);
 }

@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useStock } from '../contexts/StockContext';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../api/firebase';
 
 const useFieldsController = () => {
   const { 
     fields, 
     loading: stockLoading, 
     error: stockError, 
-    loadFields, 
-    addField, 
-    updateField, 
-    deleteField
+    loadFields
   } = useStock();
   
   // Estados locales
@@ -26,7 +25,65 @@ const useFieldsController = () => {
   const [error, setError] = useState('');
   const [filteredFieldsList, setFilteredFieldsList] = useState([]);
   
-  // Definir loadData primero, sin dependencias a otras funciones que aún no existen
+  // Función para añadir un campo
+  const addField = useCallback(async (fieldData) => {
+    try {
+      // Añadir documento a la colección 'fields'
+      const fieldRef = await addDoc(collection(db, 'fields'), {
+        ...fieldData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      
+      // Recargar campos
+      await loadFields();
+      
+      return fieldRef.id;
+    } catch (error) {
+      console.error('Error al añadir campo:', error);
+      setError('Error al añadir campo: ' + error.message);
+      throw error;
+    }
+  }, [loadFields]);
+  
+  // Función para actualizar un campo
+  const updateField = useCallback(async (fieldId, fieldData) => {
+    try {
+      // Actualizar el documento en la colección 'fields'
+      await updateDoc(doc(db, 'fields', fieldId), {
+        ...fieldData,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Recargar campos
+      await loadFields();
+      
+      return fieldId;
+    } catch (error) {
+      console.error(`Error al actualizar campo ${fieldId}:`, error);
+      setError('Error al actualizar campo: ' + error.message);
+      throw error;
+    }
+  }, [loadFields]);
+  
+  // Función para eliminar un campo
+  const deleteField = useCallback(async (fieldId) => {
+    try {
+      // Eliminar el documento de la colección 'fields'
+      await deleteDoc(doc(db, 'fields', fieldId));
+      
+      // Recargar campos
+      await loadFields();
+      
+      return true;
+    } catch (error) {
+      console.error(`Error al eliminar campo ${fieldId}:`, error);
+      setError('Error al eliminar campo: ' + error.message);
+      throw error;
+    }
+  }, [loadFields]);
+  
+  // Función para cargar campos
   const loadData = useCallback(async () => {
     try {
       setError('');
@@ -43,7 +100,7 @@ const useFieldsController = () => {
     if (stockError) {
       setError(stockError);
     }
-  }, [stockLoading, stockError]);
+  }, [stockLoading, stockError, setError]);
   
   // Cargar campos al iniciar
   useEffect(() => {
@@ -161,9 +218,11 @@ const useFieldsController = () => {
       
       setDialogOpen(false);
       await loadData();
+      return true; // Indicar éxito para desactivar animación de carga
     } catch (err) {
       console.error('Error al guardar campo:', err);
       setError('Error al guardar campo: ' + err.message);
+      throw err; // Propagar error para que el componente sepa que falló
     }
   }, [dialogType, selectedField, addField, updateField, loadData, setError]);
   
@@ -202,9 +261,11 @@ const useFieldsController = () => {
       
       setDialogOpen(false);
       await loadData();
+      return true; // Indicar éxito para desactivar animación de carga
     } catch (err) {
       console.error('Error al guardar lote:', err);
       setError('Error al guardar lote: ' + err.message);
+      throw err; // Propagar error para que el componente sepa que falló
     }
   }, [dialogType, selectedField, selectedLot, updateField, loadData, setError]);
   

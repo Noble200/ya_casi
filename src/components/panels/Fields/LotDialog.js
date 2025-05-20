@@ -106,11 +106,16 @@ const LotDialog = ({ field, lot, isNew, onSave, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Estado para el loading
+  const [submitting, setSubmitting] = useState(false);
+
   // Manejar envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (validateForm()) {
+      setSubmitting(true); // Activar animación de carga
+      
       // Preparar datos para guardar
       const lotData = {
         ...formData,
@@ -126,7 +131,13 @@ const LotDialog = ({ field, lot, isNew, onSave, onClose }) => {
         lotData.id = lot.id;
       }
       
-      onSave(lotData);
+      onSave(lotData)
+        .catch(error => {
+          console.error("Error al guardar lote:", error);
+        })
+        .finally(() => {
+          setSubmitting(false); // Desactivar animación de carga aunque haya error
+        });
     }
   };
 
@@ -327,11 +338,18 @@ const LotDialog = ({ field, lot, isNew, onSave, onClose }) => {
       </div>
       
       <div className="dialog-footer">
-        <button className="btn btn-outline" onClick={onClose}>
+        <button className="btn btn-outline" onClick={onClose} disabled={submitting}>
           Cancelar
         </button>
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          {isNew ? 'Crear lote' : 'Guardar cambios'}
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm mr-2"></span>
+              {isNew ? 'Creando...' : 'Guardando...'}
+            </>
+          ) : (
+            isNew ? 'Crear lote' : 'Guardar cambios'
+          )}
         </button>
       </div>
     </div>

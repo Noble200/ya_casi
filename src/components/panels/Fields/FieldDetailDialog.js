@@ -1,363 +1,314 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
-const FieldDialog = ({ field, isNew, onSave, onClose }) => {
-  // Estado inicial para el formulario
-  const [formData, setFormData] = useState({
-    name: '',
-    area: '',
-    areaUnit: 'ha',
-    location: '',
-    status: 'active',
-    soilType: '',
-    owner: '',
-    crops: [], // Cambiado de currentCrop a una lista de crops
-    irrigationType: '',
-    irrigationFrequency: '',
-    notes: '',
-  });
-
-  // Estado para el input de cultivo
-  const [cropInput, setCropInput] = useState('');
-  const [errors, setErrors] = useState({});
-
-  // Cargar datos del campo si estamos editando
-  useEffect(() => {
-    if (field && !isNew) {
-      // Convertir currentCrop a crops si existe
-      const crops = field.currentCrop 
-        ? [field.currentCrop] 
-        : field.crops || [];
-
-      setFormData({
-        name: field.name || '',
-        area: field.area || '',
-        areaUnit: field.areaUnit || 'ha',
-        location: field.location || '',
-        status: field.status || 'active',
-        soilType: field.soilType || '',
-        owner: field.owner || '',
-        crops: crops,
-        irrigationType: field.irrigationType || '',
-        irrigationFrequency: field.irrigationFrequency || '',
-        notes: field.notes || '',
-      });
-    }
-  }, [field, isNew]);
-
-  // Manejar cambios en el formulario
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+const FieldDetailDialog = ({ field, onClose, onEditField, onAddLot, onEditLot, onDeleteLot }) => {
+  // Mapear tipos de suelo a su descripción
+  const getSoilTypeName = (type) => {
+    const soilTypes = {
+      'sandy': 'Arenoso',
+      'clay': 'Arcilloso',
+      'loam': 'Franco',
+      'silt': 'Limoso',
+      'chalky': 'Calcáreo',
+      'peat': 'Turboso'
+    };
     
-    // Limpiar errores al modificar el campo
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
+    return soilTypes[type] || type || 'No especificado';
+  };
+  
+  // Mapear tipos de riego a su descripción
+  const getIrrigationTypeName = (type) => {
+    const irrigationTypes = {
+      'sprinkler': 'Aspersión',
+      'drip': 'Goteo',
+      'flood': 'Inundación',
+      'furrow': 'Surco',
+      'none': 'Sin riego'
+    };
+    
+    return irrigationTypes[type] || type || 'No especificado';
+  };
+  
+  // Mapear estados a su descripción
+  const getStatusName = (status) => {
+    const statuses = {
+      'active': 'Activo',
+      'inactive': 'Inactivo',
+      'prepared': 'Preparado',
+      'sown': 'Sembrado',
+      'fallow': 'En barbecho'
+    };
+    
+    return statuses[status] || status || 'No especificado';
   };
 
-  // Manejar adición de cultivo
-  const handleAddCrop = () => {
-    if (cropInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        crops: [...prev.crops, cropInput.trim()]
-      }));
-      setCropInput('');
-    }
+  // Formatear área con unidad
+  const formatArea = (area, unit = 'ha') => {
+    if (!area && area !== 0) return 'No especificada';
+    return `${area} ${unit}`;
   };
-
-  // Manejar eliminación de cultivo
-  const handleRemoveCrop = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      crops: prev.crops.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Validar formulario antes de guardar
-  const validateForm = () => {
-    const newErrors = {};
+  
+  // Formatear fecha
+  const formatDate = (date) => {
+    if (!date) return 'No especificada';
     
-    // Validar campos obligatorios
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es obligatorio';
+    if (date.seconds) {
+      // Timestamp de Firestore
+      return new Date(date.seconds * 1000).toLocaleDateString('es-ES');
     }
     
-    if (formData.area && isNaN(Number(formData.area))) {
-      newErrors.area = 'La superficie debe ser un número';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return new Date(date).toLocaleDateString('es-ES');
   };
 
-  // Manejar envío del formulario
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Calcular área total de lotes
+  const calculateTotalLotArea = () => {
+    if (!field.lots || field.lots.length === 0) return 0;
     
-    if (validateForm()) {
-      // Preparar datos para guardar
-      const fieldData = {
-        ...formData,
-        area: formData.area ? Number(formData.area) : null,
-        // Para compatibilidad, seguimos usando currentCrop como el primer cultivo
-        currentCrop: formData.crops.length > 0 ? formData.crops[0] : '',
-      };
-      
-      // Si es un campo nuevo, asegurarse de que tenga un array de lotes vacío
-      if (isNew) {
-        fieldData.lots = [];
-      } else {
-        // Si es edición, mantener los lotes existentes
-        fieldData.lots = field.lots || [];
+    return field.lots.reduce((total, lot) => {
+      // Convertir a ha si es necesario
+      let area = lot.area || 0;
+      if (lot.areaUnit === 'm²') {
+        area = area / 10000; // convertir m² a ha
+      } else if (lot.areaUnit === 'acre') {
+        area = area * 0.404686; // convertir acre a ha
       }
-      
-      onSave(fieldData);
-    }
+      return total + area;
+    }, 0).toFixed(2);
   };
 
-  // Manejar entrada de tecla en input de cultivo
-  const handleCropKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddCrop();
+  // Renderizar el estado como chip
+  const renderStatusChip = (status) => {
+    let statusClass = '';
+    
+    switch (status) {
+      case 'active': statusClass = 'status-active'; break;
+      case 'inactive': statusClass = 'status-inactive'; break;
+      case 'prepared': statusClass = 'status-prepared'; break;
+      case 'sown': statusClass = 'status-sown'; break;
+      case 'fallow': statusClass = 'status-fallow'; break;
+      default: statusClass = 'status-active';
     }
+    
+    return <span className={`field-status-chip ${statusClass}`}>{getStatusName(status)}</span>;
   };
 
   return (
-    <div className="dialog">
+    <div className="dialog" style={{ maxWidth: '900px' }}>
       <div className="dialog-header">
-        <h2 className="dialog-title">
-          {isNew ? 'Añadir nuevo campo' : 'Editar campo'}
-        </h2>
+        <div className="dialog-title-container">
+          <h2 className="dialog-title">{field.name}</h2>
+          {renderStatusChip(field.status)}
+        </div>
         <button className="dialog-close" onClick={onClose}>
           <i className="fas fa-times"></i>
         </button>
       </div>
       
-      <div className="dialog-body">
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            {/* Nombre */}
-            <div className="form-group">
-              <label htmlFor="name" className="form-label required">Nombre</label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Nombre o código del campo"
-              />
-              {errors.name && <div className="invalid-feedback">{errors.name}</div>}
-            </div>
-            
-            {/* Superficie */}
-            <div className="form-group">
-              <label htmlFor="area" className="form-label">Superficie</label>
-              <div className="form-row">
-                <div className="form-col" style={{ flex: 2 }}>
-                  <input
-                    type="text"
-                    id="area"
-                    name="area"
-                    className={`form-control ${errors.area ? 'is-invalid' : ''}`}
-                    value={formData.area}
-                    onChange={handleChange}
-                    placeholder="Superficie"
-                  />
-                  {errors.area && <div className="invalid-feedback">{errors.area}</div>}
+      <div className="dialog-body field-detail-dialog-body">
+        <div className="field-detail-tabs">
+          <div className="field-summary">
+            {/* Resumen principal */}
+            <div className="field-summary-header">
+              <div className="field-summary-title">
+                <i className="fas fa-map-marker-alt"></i>
+                <span>
+                  {field.location ? field.location : 'Ubicación no especificada'}
+                </span>
+              </div>
+              <div className="field-summary-stats">
+                <div className="summary-stat">
+                  <div className="summary-stat-value">{formatArea(field.area, field.areaUnit)}</div>
+                  <div className="summary-stat-label">Superficie total</div>
                 </div>
-                <div className="form-col" style={{ flex: 1 }}>
-                  <select
-                    id="areaUnit"
-                    name="areaUnit"
-                    className="form-control"
-                    value={formData.areaUnit}
-                    onChange={handleChange}
-                    style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
-                  >
-                    <option value="ha">ha</option>
-                    <option value="m²">m²</option>
-                    <option value="acre">acre</option>
-                  </select>
+                <div className="summary-stat">
+                  <div className="summary-stat-value">{field.lots?.length || 0}</div>
+                  <div className="summary-stat-label">Lotes</div>
+                </div>
+                <div className="summary-stat">
+                  <div className="summary-stat-value">{calculateTotalLotArea()} ha</div>
+                  <div className="summary-stat-label">Área en lotes</div>
                 </div>
               </div>
             </div>
             
-            {/* Ubicación */}
-            <div className="form-group">
-              <label htmlFor="location" className="form-label">Ubicación</label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                className="form-control"
-                value={formData.location}
-                onChange={handleChange}
-                placeholder="Ubicación o dirección"
-              />
+            {/* Acciones rápidas */}
+            <div className="field-actions-bar">
+              <button className="btn btn-primary" onClick={() => onEditField(field)}>
+                <i className="fas fa-edit"></i> Editar campo
+              </button>
+              <button className="btn btn-outline" onClick={() => onAddLot(field)}>
+                <i className="fas fa-plus"></i> Añadir lote
+              </button>
             </div>
-            
-            {/* Estado */}
-            <div className="form-group">
-              <label htmlFor="status" className="form-label">Estado</label>
-              <select
-                id="status"
-                name="status"
-                className="form-control"
-                value={formData.status}
-                onChange={handleChange}
-                style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
-              >
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-                <option value="prepared">Preparado</option>
-                <option value="sown">Sembrado</option>
-                <option value="fallow">En barbecho</option>
-              </select>
-            </div>
-            
-            {/* Tipo de suelo */}
-            <div className="form-group">
-              <label htmlFor="soilType" className="form-label">Tipo de suelo</label>
-              <select
-                id="soilType"
-                name="soilType"
-                className="form-control"
-                value={formData.soilType}
-                onChange={handleChange}
-                style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
-              >
-                <option value="">No especificado</option>
-                <option value="sandy">Arenoso</option>
-                <option value="clay">Arcilloso</option>
-                <option value="loam">Franco</option>
-                <option value="silt">Limoso</option>
-                <option value="chalky">Calcáreo</option>
-                <option value="peat">Turboso</option>
-              </select>
-            </div>
-            
-            {/* Propietario */}
-            <div className="form-group">
-              <label htmlFor="owner" className="form-label">Propietario</label>
-              <input
-                type="text"
-                id="owner"
-                name="owner"
-                className="form-control"
-                value={formData.owner}
-                onChange={handleChange}
-                placeholder="Nombre del propietario"
-              />
-            </div>
-            
-            {/* Cultivo actual - Múltiples cultivos */}
-            <div className="form-group">
-              <label htmlFor="currentCrop" className="form-label">Cultivos</label>
-              <div className="crops-container">
-                <div className="crops-input-container">
-                  <input
-                    type="text"
-                    id="cropInput"
-                    className="form-control"
-                    value={cropInput}
-                    onChange={(e) => setCropInput(e.target.value)}
-                    onKeyDown={handleCropKeyDown}
-                    placeholder="Agregar cultivo"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary crop-add-btn"
-                    onClick={handleAddCrop}
-                  >
-                    <i className="fas fa-plus"></i>
-                  </button>
+
+            {/* Información general */}
+            <div className="field-detail-section">
+              <h3 className="field-detail-title">
+                <i className="fas fa-info-circle"></i> Información General
+              </h3>
+              
+              <div className="detail-grid">
+                <div className="field-detail">
+                  <span className="detail-label">Fecha de creación</span>
+                  <span className="detail-value">{formatDate(field.createdAt)}</span>
                 </div>
-                {formData.crops && formData.crops.length > 0 ? (
-                  <div className="crops-list">
-                    {formData.crops.map((crop, index) => (
-                      <div key={index} className="crop-tag">
-                        {crop}
-                        <button
-                          type="button"
-                          className="crop-remove-btn"
-                          onClick={() => handleRemoveCrop(index)}
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      </div>
-                    ))}
+                
+                <div className="field-detail">
+                  <span className="detail-label">Última modificación</span>
+                  <span className="detail-value">{formatDate(field.updatedAt)}</span>
+                </div>
+                
+                <div className="field-detail">
+                  <span className="detail-label">Propietario</span>
+                  <span className="detail-value">{field.owner || 'No especificado'}</span>
+                </div>
+                
+                <div className="field-detail">
+                  <span className="detail-label">Tipo de suelo</span>
+                  <span className="detail-value">{getSoilTypeName(field.soilType)}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Cultivos y riego */}
+            <div className="field-detail-section">
+              <h3 className="field-detail-title">
+                <i className="fas fa-seedling"></i> Cultivo y Riego
+              </h3>
+              
+              <div className="detail-grid">
+                <div className="field-detail">
+                  <span className="detail-label">Cultivos</span>
+                  <div className="crops-display">
+                    {field.crops && field.crops.length > 0 ? (
+                      field.crops.map((crop, index) => (
+                        <span key={index} className="crop-tag">{crop}</span>
+                      ))
+                    ) : field.currentCrop ? (
+                      <span className="detail-value">{field.currentCrop}</span>
+                    ) : (
+                      <span className="detail-value">Ninguno</span>
+                    )}
                   </div>
-                ) : (
-                  <p className="no-crops-message">No hay cultivos agregados</p>
-                )}
+                </div>
+                
+                <div className="field-detail">
+                  <span className="detail-label">Tipo de riego</span>
+                  <span className="detail-value">{getIrrigationTypeName(field.irrigationType)}</span>
+                </div>
+                
+                <div className="field-detail">
+                  <span className="detail-label">Frecuencia de riego</span>
+                  <span className="detail-value">{field.irrigationFrequency || 'No especificada'}</span>
+                </div>
               </div>
             </div>
             
-            {/* Tipo de riego */}
-            <div className="form-group">
-              <label htmlFor="irrigationType" className="form-label">Tipo de riego</label>
-              <select
-                id="irrigationType"
-                name="irrigationType"
-                className="form-control"
-                value={formData.irrigationType}
-                onChange={handleChange}
-                style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
-              >
-                <option value="">No especificado</option>
-                <option value="sprinkler">Aspersión</option>
-                <option value="drip">Goteo</option>
-                <option value="flood">Inundación</option>
-                <option value="furrow">Surco</option>
-                <option value="none">Sin riego</option>
-              </select>
-            </div>
-            
-            {/* Frecuencia de riego */}
-            <div className="form-group">
-              <label htmlFor="irrigationFrequency" className="form-label">Frecuencia de riego</label>
-              <input
-                type="text"
-                id="irrigationFrequency"
-                name="irrigationFrequency"
-                className="form-control"
-                value={formData.irrigationFrequency}
-                onChange={handleChange}
-                placeholder="Ej: Diario, Semanal, etc."
-              />
-            </div>
-            
-            {/* Notas (ocupa todo el ancho) */}
-            <div className="form-group form-grid-full">
-              <label htmlFor="notes" className="form-label">Notas</label>
-              <textarea
-                id="notes"
-                name="notes"
-                className="form-control"
-                value={formData.notes}
-                onChange={handleChange}
-                placeholder="Notas adicionales sobre el campo"
-                rows={4}
-              />
-            </div>
+            {/* Notas */}
+            {field.notes && (
+              <div className="field-detail-section">
+                <h3 className="field-detail-title">
+                  <i className="fas fa-sticky-note"></i> Notas
+                </h3>
+                <div className="field-notes">
+                  {field.notes}
+                </div>
+              </div>
+            )}
           </div>
-        </form>
+        </div>
+        
+        {/* Lotes */}
+        <div className="field-detail-section lots-section">
+          <div className="lots-header">
+            <h3 className="field-detail-title">
+              <i className="fas fa-th"></i> Lotes <span className="lots-count">{field.lots?.length || 0}</span>
+            </h3>
+            
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => onAddLot(field)}
+            >
+              <i className="fas fa-plus"></i> Añadir lote
+            </button>
+          </div>
+          
+          {field.lots && field.lots.length > 0 ? (
+            <div className="lots-table-container">
+              <table className="lots-table">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Superficie</th>
+                    <th>Estado</th>
+                    <th>Cultivos</th>
+                    <th>Tipo de suelo</th>
+                    <th>Riego</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {field.lots.map((lot) => (
+                    <tr key={lot.id}>
+                      <td>{lot.name}</td>
+                      <td>{formatArea(lot.area, lot.areaUnit || field.areaUnit)}</td>
+                      <td>{renderStatusChip(lot.status || 'active')}</td>
+                      <td>
+                        <div className="crops-display">
+                          {lot.crops && lot.crops.length > 0 ? (
+                            lot.crops.map((crop, index) => (
+                              <span key={index} className="crop-tag">{crop}</span>
+                            ))
+                          ) : lot.currentCrop ? (
+                            <span>{lot.currentCrop}</span>
+                          ) : (
+                            <span>Ninguno</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{getSoilTypeName(lot.soilType || field.soilType)}</td>
+                      <td>{getIrrigationTypeName(lot.irrigationType || field.irrigationType)}</td>
+                      <td>
+                        <div className="lot-actions">
+                          <button
+                            className="btn-icon btn-icon-sm"
+                            onClick={() => onEditLot(field, lot)}
+                            title="Editar lote"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          
+                          <button
+                            className="btn-icon btn-icon-sm btn-icon-danger"
+                            onClick={() => onDeleteLot(field.id, lot.id)}
+                            title="Eliminar lote"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-message">
+              <p>No hay lotes registrados en este campo.</p>
+              <button className="btn btn-primary" onClick={() => onAddLot(field)}>
+                <i className="fas fa-plus"></i> Añadir primer lote
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       
       <div className="dialog-footer">
         <button className="btn btn-outline" onClick={onClose}>
-          Cancelar
-        </button>
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          {isNew ? 'Crear campo' : 'Guardar cambios'}
+          Cerrar
         </button>
       </div>
     </div>
   );
 };
 
-export default FieldDialog;
+export default FieldDetailDialog;

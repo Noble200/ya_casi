@@ -91,11 +91,16 @@ const FieldDialog = ({ field, isNew, onSave, onClose }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Estado para el loading
+  const [submitting, setSubmitting] = useState(false);
+
   // Manejar envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (validateForm()) {
+      setSubmitting(true); // Activar animación de carga
+      
       // Preparar datos para guardar
       const fieldData = {
         ...formData,
@@ -112,7 +117,13 @@ const FieldDialog = ({ field, isNew, onSave, onClose }) => {
         fieldData.lots = field.lots || [];
       }
       
-      onSave(fieldData);
+      onSave(fieldData)
+        .catch(error => {
+          console.error("Error al guardar campo:", error);
+        })
+        .finally(() => {
+          setSubmitting(false); // Desactivar animación de carga aunque haya error
+        });
     }
   };
 
@@ -349,11 +360,18 @@ const FieldDialog = ({ field, isNew, onSave, onClose }) => {
       </div>
       
       <div className="dialog-footer">
-        <button className="btn btn-outline" onClick={onClose}>
+        <button className="btn btn-outline" onClick={onClose} disabled={submitting}>
           Cancelar
         </button>
-        <button className="btn btn-primary" onClick={handleSubmit}>
-          {isNew ? 'Crear campo' : 'Guardar cambios'}
+        <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm mr-2"></span>
+              {isNew ? 'Creando...' : 'Guardando...'}
+            </>
+          ) : (
+            isNew ? 'Crear campo' : 'Guardar cambios'
+          )}
         </button>
       </div>
     </div>
