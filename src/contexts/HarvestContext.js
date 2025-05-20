@@ -1,3 +1,4 @@
+// src/contexts/HarvestContext.js - Contexto para gestión de cosechas
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   collection, 
@@ -44,21 +45,29 @@ export function HarvestProvider({ children }) {
         const harvestData = doc.data();
         harvestsData.push({
           id: doc.id,
-          establishment: harvestData.establishment,
-          field: harvestData.field,
-          lot: harvestData.lot,
-          crop: harvestData.crop,
-          surface: harvestData.surface || 0,
-          surfaceUnit: harvestData.surfaceUnit || 'ha',
+          field: harvestData.field || {},
+          fieldId: harvestData.fieldId || '',
+          crop: harvestData.crop || '',
+          lots: harvestData.lots || [],
+          totalArea: harvestData.totalArea || 0,
+          areaUnit: harvestData.areaUnit || 'ha',
           plannedDate: harvestData.plannedDate,
           harvestDate: harvestData.harvestDate || null,
           status: harvestData.status || 'pending',
           estimatedYield: harvestData.estimatedYield || 0,
           actualYield: harvestData.actualYield || 0,
-          yieldUnit: harvestData.yieldUnit || 'kg',
+          yieldUnit: harvestData.yieldUnit || 'kg/ha',
+          totalHarvested: harvestData.totalHarvested || 0,
+          totalHarvestedUnit: harvestData.totalHarvestedUnit || 'kg',
           harvestMethod: harvestData.harvestMethod || '',
-          warehouseId: harvestData.warehouseId || null,
+          machinery: harvestData.machinery || [],
+          workers: harvestData.workers || '',
+          targetWarehouse: harvestData.targetWarehouse || '',
+          destination: harvestData.destination || '',
+          qualityParameters: harvestData.qualityParameters || [],
+          qualityResults: harvestData.qualityResults || [],
           notes: harvestData.notes || '',
+          harvestNotes: harvestData.harvestNotes || '',
           createdAt: harvestData.createdAt,
           updatedAt: harvestData.updatedAt
         });
@@ -74,7 +83,7 @@ export function HarvestProvider({ children }) {
       }
 
       if (filters.field) {
-        harvestsData = harvestsData.filter(harvest => harvest.field === filters.field);
+        harvestsData = harvestsData.filter(harvest => harvest.fieldId === filters.field);
       }
       
       if (filters.dateRange) {
@@ -94,9 +103,9 @@ export function HarvestProvider({ children }) {
       if (filters.searchTerm) {
         const term = filters.searchTerm.toLowerCase();
         harvestsData = harvestsData.filter(harvest => 
-          harvest.establishment.toLowerCase().includes(term) || 
-          harvest.crop.toLowerCase().includes(term) ||
-          (harvest.lot && harvest.lot.toLowerCase().includes(term))
+          (harvest.crop && harvest.crop.toLowerCase().includes(term)) || 
+          (harvest.field && harvest.field.name && harvest.field.name.toLowerCase().includes(term)) ||
+          (harvest.harvestMethod && harvest.harvestMethod.toLowerCase().includes(term))
         );
       }
       
@@ -118,17 +127,20 @@ export function HarvestProvider({ children }) {
       
       // Preparar datos para Firestore
       const dbHarvestData = {
-        establishment: harvestData.establishment,
-        field: harvestData.field,
-        lot: harvestData.lot,
-        crop: harvestData.crop,
-        surface: harvestData.surface || 0,
-        surfaceUnit: harvestData.surfaceUnit || 'ha',
+        field: harvestData.field || {},
+        fieldId: harvestData.fieldId || harvestData.field?.id || '',
+        crop: harvestData.crop || '',
+        lots: harvestData.lots || [],
+        totalArea: harvestData.totalArea || 0,
+        areaUnit: harvestData.areaUnit || 'ha',
         status: harvestData.status || 'pending',
         estimatedYield: harvestData.estimatedYield || 0,
-        yieldUnit: harvestData.yieldUnit || 'kg',
+        yieldUnit: harvestData.yieldUnit || 'kg/ha',
         harvestMethod: harvestData.harvestMethod || '',
-        warehouseId: harvestData.warehouseId || null,
+        machinery: harvestData.machinery || [],
+        workers: harvestData.workers || '',
+        targetWarehouse: harvestData.targetWarehouse || '',
+        qualityParameters: harvestData.qualityParameters || [],
         notes: harvestData.notes || '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -138,12 +150,6 @@ export function HarvestProvider({ children }) {
       if (harvestData.plannedDate) {
         if (harvestData.plannedDate instanceof Date) {
           dbHarvestData.plannedDate = Timestamp.fromDate(harvestData.plannedDate);
-        }
-      }
-      
-      if (harvestData.harvestDate) {
-        if (harvestData.harvestDate instanceof Date) {
-          dbHarvestData.harvestDate = Timestamp.fromDate(harvestData.harvestDate);
         }
       }
       
@@ -179,6 +185,7 @@ export function HarvestProvider({ children }) {
         }
       }
       
+      // Si viene fecha de cosecha, convertirla
       if (harvestData.harvestDate) {
         if (harvestData.harvestDate instanceof Date) {
           updateData.harvestDate = Timestamp.fromDate(harvestData.harvestDate);
@@ -224,25 +231,40 @@ export function HarvestProvider({ children }) {
       setError('');
       
       // Obtener la cosecha actual
-      const harvestDoc = await doc(db, 'harvests', harvestId);
+      const harvestDoc = doc(db, 'harvests', harvestId);
       
       // Datos para la actualización
       const updateData = {
         status: 'completed',
-        harvestDate: Timestamp.fromDate(new Date()),
-        actualYield: harvestResults.actualYield || 0,
-        notes: harvestResults.notes || '',
         updatedAt: serverTimestamp()
       };
+      
+      // Añadir los resultados de la cosecha
+      if (harvestResults) {
+        // Convertir la fecha de cosecha
+        if (harvestResults.harvestDate) {
+          if (harvestResults.harvestDate instanceof Date) {
+            updateData.harvestDate = Timestamp.fromDate(harvestResults.harvestDate);
+          }
+        }
+        
+        // Otros campos de resultados
+        updateData.actualYield = harvestResults.actualYield || 0;
+        updateData.totalHarvested = harvestResults.totalHarvested || null;
+        updateData.totalHarvestedUnit = harvestResults.totalHarvestedUnit || 'kg';
+        updateData.destination = harvestResults.destination || '';
+        updateData.qualityResults = harvestResults.qualityResults || [];
+        updateData.harvestNotes = harvestResults.harvestNotes || '';
+      }
       
       // Actualizar la cosecha
       await updateDoc(harvestDoc, updateData);
       
-      // Si se especificó un almacén destino, añadir el producto al inventario
-      if (harvestResults.warehouseId && harvestResults.actualYield > 0) {
-        // Aquí iría la lógica para actualizar el inventario
-        // Esta parte se implementaría en integración con el contexto de stock
-      }
+      // Si se especificó un almacén destino, podríamos añadir el producto al inventario
+      // Esta parte se implementaría en integración con el contexto de stock
+      // if (harvestResults.destination && harvestResults.totalHarvested > 0) {
+      //   // Aquí iría la lógica para actualizar el inventario
+      // }
       
       // Recargar cosechas
       await loadHarvests();

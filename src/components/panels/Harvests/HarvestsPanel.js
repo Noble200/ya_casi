@@ -1,25 +1,31 @@
+// src/components/panels/Harvests/HarvestsPanel.js - Panel completo de cosechas
 import React from 'react';
 import './harvests.css';
+import HarvestDialog from './HarvestDialog';
+import HarvestDetailDialog from './HarvestDetailDialog';
+import CompleteHarvestDialog from './CompleteHarvestDialog';
 
-// Componente visual para la gestión de cosechas
 const HarvestsPanel = ({
   harvests,
+  fields,
   loading,
   error,
   selectedHarvest,
+  selectedField,
+  selectedLots,
   dialogOpen,
-  currentView,
+  dialogType,
   filterOptions,
-  sortOptions,
   onAddHarvest,
   onEditHarvest,
-  onDeleteHarvest,
   onViewHarvest,
+  onDeleteHarvest,
   onCompleteHarvest,
-  onDialogClose,
+  onSaveHarvest,
+  onCompleteHarvestSubmit,
   onFilterChange,
-  onSortChange,
-  onSearchChange,
+  onSearch,
+  onCloseDialog,
   onRefresh
 }) => {
   // Función para formatear una fecha
@@ -51,7 +57,7 @@ const HarvestsPanel = ({
         break;
       case 'in_progress':
         chipClass = 'chip-info';
-        statusText = 'En Proceso';
+        statusText = 'En proceso';
         break;
       case 'completed':
         chipClass = 'chip-success';
@@ -63,7 +69,7 @@ const HarvestsPanel = ({
         break;
       default:
         chipClass = 'chip-primary';
-        statusText = status;
+        statusText = status || 'Desconocido';
     }
 
     return <span className={`chip ${chipClass}`}>{statusText}</span>;
@@ -110,6 +116,7 @@ const HarvestsPanel = ({
               id="statusFilter"
               className="form-control"
               onChange={(e) => onFilterChange('status', e.target.value)}
+              style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
             >
               {filterOptions.status.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -125,10 +132,28 @@ const HarvestsPanel = ({
               id="cropFilter"
               className="form-control"
               onChange={(e) => onFilterChange('crop', e.target.value)}
+              style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
             >
               {filterOptions.crops.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="filter-item">
+            <label htmlFor="fieldFilter">Campo:</label>
+            <select
+              id="fieldFilter"
+              className="form-control"
+              onChange={(e) => onFilterChange('field', e.target.value)}
+              style={{ height: 'auto', minHeight: '40px', paddingTop: '8px', paddingBottom: '8px' }}
+            >
+              <option value="all">Todos los campos</option>
+              {fields.map((field) => (
+                <option key={field.id} value={field.id}>
+                  {field.name}
                 </option>
               ))}
             </select>
@@ -166,7 +191,7 @@ const HarvestsPanel = ({
             <input
               type="text"
               placeholder="Buscar cosechas..."
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => onSearch(e.target.value)}
             />
           </div>
         </div>
@@ -182,102 +207,198 @@ const HarvestsPanel = ({
         </div>
       )}
 
-      {/* Tabla de cosechas */}
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Establecimiento</th>
-              <th>Cultivo</th>
-              <th>Superficie (ha)</th>
-              <th>Fecha Planificada</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {harvests.length > 0 ? (
-              harvests.map((harvest) => (
-                <tr key={harvest.id} onClick={() => onViewHarvest(harvest)}>
-                  <td>
-                    <div className="cell-content">
-                      <span className="cell-main">{harvest.establishment}</span>
-                      <span className="cell-sub">Lote: {harvest.lot}</span>
-                    </div>
-                  </td>
-                  <td>{harvest.crop}</td>
-                  <td>{harvest.surface} {harvest.surfaceUnit}</td>
-                  <td>{formatDate(harvest.plannedDate)}</td>
-                  <td>{renderStatusChip(harvest.status)}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button 
-                        className="btn-icon btn-icon-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewHarvest(harvest);
-                        }}
-                        title="Ver detalles"
-                      >
-                        <i className="fas fa-eye"></i>
-                      </button>
-                      
-                      <button 
-                        className="btn-icon btn-icon-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditHarvest(harvest);
-                        }}
-                        title="Editar"
-                      >
-                        <i className="fas fa-edit"></i>
-                      </button>
-                      
-                      {harvest.status !== 'completed' && harvest.status !== 'cancelled' && (
-                        <button 
-                          className="btn-icon btn-icon-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onCompleteHarvest(harvest);
-                          }}
-                          title="Completar cosecha"
-                        >
-                          <i className="fas fa-check-circle"></i>
-                        </button>
-                      )}
-                      
-                      <button 
-                        className="btn-icon btn-icon-sm btn-icon-danger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm('¿Estás seguro de que deseas eliminar esta cosecha?')) {
-                            onDeleteHarvest(harvest.id);
-                          }
-                        }}
-                        title="Eliminar"
-                      >
-                        <i className="fas fa-trash"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr className="empty-row">
-                <td colSpan="6">
-                  <div className="empty-message">
-                    <i className="fas fa-info-circle"></i>
-                    <p>No se encontraron cosechas que coincidan con los filtros.</p>
+      {/* Grid de cosechas */}
+      {harvests.length > 0 ? (
+        <div className="harvests-grid">
+          {harvests.map((harvest) => (
+            <div 
+              key={harvest.id} 
+              className={`harvest-card ${harvest.status}`} 
+              onClick={() => onViewHarvest(harvest)}
+            >
+              <div className="harvest-header">
+                <h3 className="harvest-title">{harvest.field.name}</h3>
+                {renderStatusChip(harvest.status)}
+              </div>
+              
+              <div className="harvest-content">
+                <div className="harvest-details">
+                  <div className="harvest-detail">
+                    <span className="detail-label">Cultivo</span>
+                    <span className="detail-value">{harvest.crop}</span>
                   </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  
+                  <div className="harvest-detail">
+                    <span className="detail-label">Superficie total</span>
+                    <span className="detail-value">
+                      {harvest.totalArea} {harvest.areaUnit || 'ha'}
+                    </span>
+                  </div>
+                  
+                  <div className="harvest-detail">
+                    <span className="detail-label">Fecha planificada</span>
+                    <span className="detail-value">
+                      {formatDate(harvest.plannedDate)}
+                    </span>
+                  </div>
+                  
+                  <div className="harvest-detail">
+                    <span className="detail-label">Lotes</span>
+                    <span className="detail-value">
+                      {harvest.lots ? harvest.lots.length : 0} lotes seleccionados
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Lotes seleccionados */}
+                <div className="harvest-lots">
+                  <div className="lots-header">
+                    <h4 className="lots-title">Lotes</h4>
+                  </div>
+                  
+                  {harvest.lots && harvest.lots.length > 0 ? (
+                    <div className="lot-chips">
+                      {harvest.lots.slice(0, 5).map((lot) => (
+                        <div key={lot.id} className="lot-chip">
+                          {lot.name}
+                        </div>
+                      ))}
+                      {harvest.lots.length > 5 && (
+                        <div className="lot-chip">
+                          +{harvest.lots.length - 5} más
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="no-lots-message">No hay lotes seleccionados</p>
+                  )}
+                </div>
+                
+                {/* Rendimiento esperado */}
+                <div className="harvest-yield">
+                  <div className="yield-item">
+                    <i className="fas fa-balance-scale"></i>
+                    <div className="yield-content">
+                      <div className="yield-value">
+                        {harvest.estimatedYield || 'N/A'} {harvest.yieldUnit || 'kg/ha'}
+                      </div>
+                      <div className="yield-label">Rendimiento esperado</div>
+                    </div>
+                  </div>
+                  
+                  {harvest.status === 'completed' && (
+                    <div className="yield-item">
+                      <i className="fas fa-check-circle"></i>
+                      <div className="yield-content">
+                        <div className="yield-value">
+                          {harvest.actualYield || 'N/A'} {harvest.yieldUnit || 'kg/ha'}
+                        </div>
+                        <div className="yield-label">Rendimiento real</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="harvest-actions">
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewHarvest(harvest);
+                    }}
+                    title="Ver detalles"
+                  >
+                    <i className="fas fa-eye"></i> Detalles
+                  </button>
+                  
+                  {(harvest.status === 'pending' || harvest.status === 'scheduled' || harvest.status === 'in_progress') && (
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCompleteHarvest(harvest);
+                      }}
+                      title="Completar cosecha"
+                    >
+                      <i className="fas fa-check-circle"></i> Completar
+                    </button>
+                  )}
+                  
+                  {(harvest.status === 'pending' || harvest.status === 'scheduled') && (
+                    <button
+                      className="btn-icon btn-icon-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditHarvest(harvest);
+                      }}
+                      title="Editar cosecha"
+                    >
+                      <i className="fas fa-edit"></i>
+                    </button>
+                  )}
+                  
+                  <button
+                    className="btn-icon btn-icon-sm btn-icon-danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('¿Estás seguro de que deseas eliminar esta cosecha?')) {
+                        onDeleteHarvest(harvest.id);
+                      }
+                    }}
+                    title="Eliminar cosecha"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <div className="empty-icon">
+            <i className="fas fa-tractor"></i>
+          </div>
+          <h2 className="empty-title">No hay cosechas registradas</h2>
+          <p className="empty-description">
+            Comienza añadiendo una nueva cosecha para gestionar la recolección de tus cultivos.
+          </p>
+          <button className="btn btn-primary" onClick={onAddHarvest}>
+            <i className="fas fa-plus"></i> Añadir cosecha
+          </button>
+        </div>
+      )}
 
-      {/* En una implementación real, aquí irían los diálogos para añadir/editar/ver cosechas */}
-      {/* Por simplicidad, no los incluimos en esta versión inicial */}
+      {/* Diálogos */}
+      {dialogOpen && (
+        <div className="dialog-overlay">
+          {dialogType === 'add-harvest' || dialogType === 'edit-harvest' ? (
+            <HarvestDialog
+              harvest={selectedHarvest}
+              fields={fields}
+              selectedField={selectedField}
+              selectedLots={selectedLots}
+              isNew={dialogType === 'add-harvest'}
+              onSave={onSaveHarvest}
+              onClose={onCloseDialog}
+            />
+          ) : dialogType === 'view-harvest' ? (
+            <HarvestDetailDialog
+              harvest={selectedHarvest}
+              onClose={onCloseDialog}
+              onEditHarvest={onEditHarvest}
+              onCompleteHarvest={onCompleteHarvest}
+              onDeleteHarvest={onDeleteHarvest}
+            />
+          ) : dialogType === 'complete-harvest' ? (
+            <CompleteHarvestDialog
+              harvest={selectedHarvest}
+              onComplete={onCompleteHarvestSubmit}
+              onClose={onCloseDialog}
+            />
+          ) : null}
+        </div>
+      )}
     </div>
   );
 };

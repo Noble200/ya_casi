@@ -1,135 +1,273 @@
+// src/controllers/HarvestsController.js - Controlador con la lógica para las cosechas
 import { useState, useEffect, useCallback } from 'react';
 import { useHarvests } from '../contexts/HarvestContext';
+import { useStock } from '../contexts/StockContext';
 
 const useHarvestsController = () => {
   const {
     harvests,
-    loading,
-    error,
+    loading: harvestsLoading,
+    error: harvestsError,
     loadHarvests,
     addHarvest,
     updateHarvest,
     deleteHarvest,
     completeHarvest
   } = useHarvests();
+  
+  const {
+    fields,
+    loading: fieldsLoading,
+    error: fieldsError,
+    loadFields,
+  } = useStock();
 
-  // Estados para la interfaz de usuario
+  // Estados locales
   const [selectedHarvest, setSelectedHarvest] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
+  const [selectedLots, setSelectedLots] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('list'); // 'list', 'add', 'edit', 'view', 'complete'
+  const [dialogType, setDialogType] = useState(''); // 'add-harvest', 'edit-harvest', 'view-harvest', 'complete-harvest'
   const [filters, setFilters] = useState({
     status: 'all',
     crop: 'all',
-    dateRange: { start: null, end: null }
+    field: 'all',
+    dateRange: { start: null, end: null },
+    searchTerm: ''
   });
-  const [sortBy, setSortBy] = useState('plannedDate');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filteredHarvestsList, setFilteredHarvestsList] = useState([]);
 
-  // Cargar cosechas con filtros
-  const fetchHarvests = useCallback(async () => {
+  // Cargar campos y cosechas al iniciar
+  const loadData = useCallback(async () => {
     try {
-      // Preparar filtros
-      const filterParams = {};
+      setError('');
       
-      if (filters.status !== 'all') {
-        filterParams.status = filters.status;
-      }
-      
-      if (filters.crop !== 'all') {
-        filterParams.crop = filters.crop;
-      }
-      
-      if (filters.dateRange.start || filters.dateRange.end) {
-        filterParams.dateRange = filters.dateRange;
-      }
-      
-      if (searchTerm) {
-        filterParams.searchTerm = searchTerm;
+      // Cargar campos si no están cargados
+      if (fields.length === 0) {
+        await loadFields();
       }
       
       // Cargar cosechas
-      await loadHarvests(filterParams);
+      await loadHarvests();
     } catch (err) {
-      console.error('Error al cargar cosechas:', err);
+      console.error('Error al cargar datos:', err);
+      setError('Error al cargar datos: ' + err.message);
     }
-  }, [loadHarvests, filters, searchTerm]);
+  }, [loadFields, loadHarvests, fields.length]);
 
-  // Cargar datos al iniciar o cuando cambian los filtros
+  // Actualizar estado de carga y error
   useEffect(() => {
-    fetchHarvests();
-  }, [fetchHarvests]);
+    const isLoading = harvestsLoading || fieldsLoading;
+    setLoading(isLoading);
+    
+    // Establecer mensaje de error si lo hay
+    if (harvestsError) {
+      setError(harvestsError);
+    } else if (fieldsError) {
+      setError(fieldsError);
+    } else {
+      setError('');
+    }
+  }, [harvestsLoading, fieldsLoading, harvestsError, fieldsError]);
 
-  // Manejar los filtros
-  const handleFilterChange = (filterName, value) => {
+  // Cargar datos al iniciar
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Filtrar cosechas según filtros aplicados
+  const getFilteredHarvests = useCallback(() => {
+    if (!harvests || harvests.length === 0) return [];
+    
+    // Hacer una copia del array para no modificar el original
+    const harvestsWithFieldRefs = harvests.map(harvest => {
+      // Si el harvest ya tiene una referencia completa al campo, usarla
+      if (harvest.field && typeof harvest.field === 'object') {
+        return harvest;
+      }
+      
+      // Si no, buscar el campo por ID
+      const field = fields.find(f => f.id === harvest.fieldId);
+      return {
+        ...harvest,
+        field: field ? { id: field.id, name: field.name } : { id: harvest.fieldId, name: 'Campo desconocido' }
+      };
+    });
+    
+    return harvestsWithFieldRefs.filter(harvest => {
+      // Filtro por estado
+      if (filters.status !== 'all' && harvest.status !== filters.status) {
+        return false;
+      }
+      
+      // Filtro por cultivo
+      if (filters.crop !== 'all' && harvest.crop !== filters.crop) {
+        return false;
+      }
+      
+      // Filtro por campo
+      if (filters.field !== 'all' && harvest.fieldId !== filters.field) {
+        return false;
+      }
+      
+      // Filtro por fecha
+      if (filters.dateRange.start || filters.dateRange.end) {
+        const plannedDate = harvest.plannedDate
+          ? new Date(harvest.plannedDate.seconds ? harvest.plannedDate.seconds * 1000 : harvest.plannedDate)
+          : null;
+        
+        if (!plannedDate) return false;
+        
+        if (filters.dateRange.start) {
+          const startDate = new Date(filters.dateRange.start);
+          if (plannedDate < startDate) return false;
+        }
+        
+        if (filters.dateRange.end) {
+          const endDate = new Date(filters.dateRange.end);
+          endDate.setHours(23, 59, 59, 999); // Ajustar al final del día
+          if (plannedDate > endDate) return false;
+        }
+      }
+      
+      // Búsqueda por texto
+      if (filters.searchTerm) {
+        const term = filters.searchTerm.toLowerCase();
+        return (
+          (harvest.crop && harvest.crop.toLowerCase().includes(term)) ||
+          (harvest.field && harvest.field.name && harvest.field.name.toLowerCase().includes(term)) ||
+          (harvest.harvestMethod && harvest.harvestMethod.toLowerCase().includes(term))
+        );
+      }
+      
+      return true;
+    });
+  }, [harvests, fields, filters]);
+
+  // Actualizar cosechas filtradas cuando cambian los filtros, cosechas o campos
+  useEffect(() => {
+    setFilteredHarvestsList(getFilteredHarvests());
+  }, [getFilteredHarvests]);
+
+  // Abrir diálogo para añadir cosecha
+  const handleAddHarvest = useCallback(() => {
+    setSelectedHarvest(null);
+    setSelectedField(null);
+    setSelectedLots([]);
+    setDialogType('add-harvest');
+    setDialogOpen(true);
+  }, []);
+
+  // Abrir diálogo para añadir cosecha desde un campo específico
+  const handleAddHarvestFromField = useCallback((field, lots = []) => {
+    setSelectedHarvest(null);
+    setSelectedField(field);
+    setSelectedLots(lots);
+    setDialogType('add-harvest');
+    setDialogOpen(true);
+  }, []);
+
+  // Abrir diálogo para editar cosecha
+  const handleEditHarvest = useCallback((harvest) => {
+    setSelectedHarvest(harvest);
+    setSelectedField(null);
+    setSelectedLots([]);
+    setDialogType('edit-harvest');
+    setDialogOpen(true);
+  }, []);
+
+  // Abrir diálogo para ver detalles de cosecha
+  const handleViewHarvest = useCallback((harvest) => {
+    setSelectedHarvest(harvest);
+    setDialogType('view-harvest');
+    setDialogOpen(true);
+  }, []);
+
+  // Abrir diálogo para completar cosecha
+  const handleCompleteHarvest = useCallback((harvest) => {
+    setSelectedHarvest(harvest);
+    setDialogType('complete-harvest');
+    setDialogOpen(true);
+  }, []);
+
+  // Confirmar eliminación de cosecha
+  const handleDeleteHarvest = useCallback(async (harvestId) => {
+    try {
+      await deleteHarvest(harvestId);
+      
+      // Cerrar el diálogo si estaba abierto para esta cosecha
+      if (selectedHarvest && selectedHarvest.id === harvestId) {
+        setDialogOpen(false);
+      }
+    } catch (err) {
+      console.error('Error al eliminar cosecha:', err);
+      setError('Error al eliminar cosecha: ' + err.message);
+    }
+  }, [deleteHarvest, selectedHarvest]);
+
+  // Guardar cosecha (nueva o editada)
+  const handleSaveHarvest = useCallback(async (harvestData) => {
+    try {
+      if (dialogType === 'add-harvest') {
+        // Crear nueva cosecha
+        await addHarvest(harvestData);
+      } else if (dialogType === 'edit-harvest' && selectedHarvest) {
+        // Actualizar cosecha existente
+        await updateHarvest(selectedHarvest.id, harvestData);
+      }
+      
+      setDialogOpen(false);
+      await loadHarvests();
+      return true;
+    } catch (err) {
+      console.error('Error al guardar cosecha:', err);
+      setError('Error al guardar cosecha: ' + err.message);
+      throw err;
+    }
+  }, [dialogType, selectedHarvest, addHarvest, updateHarvest, loadHarvests]);
+
+  // Completar cosecha
+  const handleCompleteHarvestSubmit = useCallback(async (harvestData) => {
+    try {
+      if (!selectedHarvest) return;
+      
+      await completeHarvest(selectedHarvest.id, harvestData);
+      
+      setDialogOpen(false);
+      await loadHarvests();
+      return true;
+    } catch (err) {
+      console.error('Error al completar cosecha:', err);
+      setError('Error al completar cosecha: ' + err.message);
+      throw err;
+    }
+  }, [selectedHarvest, completeHarvest, loadHarvests]);
+
+  // Cambiar filtros
+  const handleFilterChange = useCallback((filterName, value) => {
     setFilters(prev => ({
       ...prev,
       [filterName]: value
     }));
-  };
+  }, []);
 
-  // Manejar ordenamiento
-  const handleSortChange = (field, order) => {
-    setSortBy(field);
-    setSortOrder(order);
-  };
-
-  // Manejar búsqueda
-  const handleSearchChange = (term) => {
-    setSearchTerm(term);
-  };
-
-  // Abrir diálogo para añadir cosecha
-  const handleAddHarvest = () => {
-    setSelectedHarvest(null);
-    setCurrentView('add');
-    setDialogOpen(true);
-  };
-
-  // Abrir diálogo para editar cosecha
-  const handleEditHarvest = (harvest) => {
-    setSelectedHarvest(harvest);
-    setCurrentView('edit');
-    setDialogOpen(true);
-  };
-
-  // Abrir diálogo para ver detalles
-  const handleViewHarvest = (harvest) => {
-    setSelectedHarvest(harvest);
-    setCurrentView('view');
-    setDialogOpen(true);
-  };
-
-  // Confirmar eliminación de cosecha
-  const handleDeleteHarvest = async (harvestId) => {
-    try {
-      await deleteHarvest(harvestId);
-    } catch (err) {
-      console.error('Error al eliminar cosecha:', err);
-    }
-  };
-
-  // Abrir diálogo para completar cosecha
-  const handleCompleteHarvest = (harvest) => {
-    setSelectedHarvest(harvest);
-    setCurrentView('complete');
-    setDialogOpen(true);
-  };
+  // Buscar por texto
+  const handleSearch = useCallback((searchTerm) => {
+    setFilters(prev => ({
+      ...prev,
+      searchTerm
+    }));
+  }, []);
 
   // Cerrar diálogo
-  const handleDialogClose = (refreshData = false) => {
+  const handleCloseDialog = useCallback(() => {
     setDialogOpen(false);
     setSelectedHarvest(null);
-    
-    if (refreshData) {
-      fetchHarvests();
-    }
-  };
-
-  // Refrescar datos
-  const handleRefresh = () => {
-    fetchHarvests();
-  };
+    setSelectedField(null);
+    setSelectedLots([]);
+  }, []);
 
   // Opciones para filtros
   const filterOptions = {
@@ -149,63 +287,36 @@ const useHarvestsController = () => {
       { value: 'girasol', label: 'Girasol' },
       { value: 'alfalfa', label: 'Alfalfa' },
       { value: 'otro', label: 'Otro' }
-    ]
+    ],
+    dateRange: {
+      start: null,
+      end: null
+    }
   };
 
-  // Opciones para ordenamiento
-  const sortOptions = [
-    { value: 'plannedDate', label: 'Fecha planificada' },
-    { value: 'establishment', label: 'Establecimiento' },
-    { value: 'crop', label: 'Cultivo' },
-    { value: 'surface', label: 'Superficie' },
-    { value: 'status', label: 'Estado' }
-  ];
-
-  // Ordenar la lista de cosechas según los criterios establecidos
-  const sortedHarvests = [...harvests].sort((a, b) => {
-    // Asegurar que los valores no son undefined
-    const aValue = a[sortBy] !== undefined ? a[sortBy] : '';
-    const bValue = b[sortBy] !== undefined ? b[sortBy] : '';
-    
-    // Manejar ordenamiento por fechas (asumiendo que son objetos Timestamp de Firestore)
-    if (sortBy === 'plannedDate' || sortBy === 'harvestDate') {
-      const dateA = aValue ? (aValue.seconds ? new Date(aValue.seconds * 1000) : new Date(aValue)) : new Date(0);
-      const dateB = bValue ? (bValue.seconds ? new Date(bValue.seconds * 1000) : new Date(bValue)) : new Date(0);
-      
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-    }
-    
-    // Ordenamiento para strings y números
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc' 
-        ? aValue.localeCompare(bValue) 
-        : bValue.localeCompare(aValue);
-    } else {
-      return sortOrder === 'asc' 
-        ? (aValue > bValue ? 1 : -1) 
-        : (bValue > aValue ? 1 : -1);
-    }
-  });
-
   return {
-    harvests: sortedHarvests,
+    harvests: filteredHarvestsList,
+    fields,
     loading,
     error,
     selectedHarvest,
+    selectedField,
+    selectedLots,
     dialogOpen,
-    currentView,
+    dialogType,
     filterOptions,
-    sortOptions,
     handleAddHarvest,
+    handleAddHarvestFromField,
     handleEditHarvest,
-    handleDeleteHarvest,
     handleViewHarvest,
     handleCompleteHarvest,
-    handleDialogClose,
+    handleDeleteHarvest,
+    handleSaveHarvest,
+    handleCompleteHarvestSubmit,
     handleFilterChange,
-    handleSortChange,
-    handleSearchChange,
-    handleRefresh
+    handleSearch,
+    handleCloseDialog,
+    refreshData: loadData
   };
 };
 

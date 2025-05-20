@@ -1,52 +1,58 @@
+// src/pages/Harvests.js - Página principal de cosechas que conecta con el controlador
 import React from 'react';
 import HarvestsPanel from '../components/panels/Harvests/HarvestsPanel';
 import useHarvestsController from '../controllers/HarvestsController';
 
-// Página principal de cosechas que conecta el controlador con el componente visual
 const Harvests = () => {
   // Usar el controlador para obtener datos y funciones
   const {
     harvests,
+    fields,
     loading,
     error,
     selectedHarvest,
+    selectedField,
+    selectedLots,
     dialogOpen,
-    currentView,
+    dialogType,
     filterOptions,
-    sortOptions,
     handleAddHarvest,
     handleEditHarvest,
-    handleDeleteHarvest,
     handleViewHarvest,
+    handleDeleteHarvest,
     handleCompleteHarvest,
-    handleDialogClose,
+    handleSaveHarvest,
+    handleCompleteHarvestSubmit,
     handleFilterChange,
-    handleSortChange,
-    handleSearchChange,
-    handleRefresh
+    handleSearch,
+    handleCloseDialog,
+    refreshData
   } = useHarvestsController();
 
   // Renderizar el componente visual con los datos del controlador
   return (
     <HarvestsPanel
       harvests={harvests}
+      fields={fields}
       loading={loading}
       error={error}
       selectedHarvest={selectedHarvest}
+      selectedField={selectedField}
+      selectedLots={selectedLots}
       dialogOpen={dialogOpen}
-      currentView={currentView}
+      dialogType={dialogType}
       filterOptions={filterOptions}
-      sortOptions={sortOptions}
       onAddHarvest={handleAddHarvest}
       onEditHarvest={handleEditHarvest}
-      onDeleteHarvest={handleDeleteHarvest}
       onViewHarvest={handleViewHarvest}
+      onDeleteHarvest={handleDeleteHarvest}
       onCompleteHarvest={handleCompleteHarvest}
-      onDialogClose={handleDialogClose}
+      onSaveHarvest={handleSaveHarvest}
+      onCompleteHarvestSubmit={handleCompleteHarvestSubmit}
       onFilterChange={handleFilterChange}
-      onSortChange={handleSortChange}
-      onSearchChange={handleSearchChange}
-      onRefresh={handleRefresh}
+      onSearch={handleSearch}
+      onCloseDialog={handleCloseDialog}
+      onRefresh={refreshData}
     />
   );
 };
