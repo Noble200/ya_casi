@@ -1,3 +1,4 @@
+// src/contexts/StockContext.js - Contexto corregido para productos
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   collection, 
@@ -32,11 +33,13 @@ export function StockProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Cargar productos
+  // Cargar productos - CORREGIDO
   const loadProducts = useCallback(async (filters = {}) => {
     try {
       setLoading(true);
       setError('');
+      
+      console.log('Cargando productos desde Firestore...'); // Debug
       
       // Crear consulta base
       const productsQuery = query(collection(db, 'products'), orderBy('name'));
@@ -46,21 +49,38 @@ export function StockProvider({ children }) {
       let productsData = [];
       querySnapshot.forEach((doc) => {
         const productData = doc.data();
+        
+        console.log('Producto cargado:', doc.id, productData); // Debug
+        
         productsData.push({
           id: doc.id,
           name: productData.name,
+          code: productData.code,
           category: productData.category,
-          quantity: productData.quantity || 0,
+          storageType: productData.storageType,
+          unit: productData.unit,
+          stock: productData.stock || 0, // CORREGIDO: usar 'stock' en lugar de 'quantity'
           minStock: productData.minStock || 0,
-          unitOfMeasure: productData.unitOfMeasure || 'unidad',
-          lotNumber: productData.lotNumber || '',
-          notes: productData.notes || '',
+          lotNumber: productData.lotNumber,
+          storageConditions: productData.storageConditions,
+          dimensions: productData.dimensions,
           expiryDate: productData.expiryDate,
-          warehouseStock: productData.warehouseStock || {},
+          supplierCode: productData.supplierCode,
+          cost: productData.cost,
+          supplierName: productData.supplierName,
+          supplierContact: productData.supplierContact,
+          tags: productData.tags || [],
+          notes: productData.notes,
+          fieldId: productData.fieldId,
+          warehouseId: productData.warehouseId,
+          lotId: productData.lotId,
+          storageLevel: productData.storageLevel,
           createdAt: productData.createdAt,
           updatedAt: productData.updatedAt
         });
       });
+      
+      console.log('Total productos cargados:', productsData.length); // Debug
       
       // Aplicar filtros si se proporcionan
       if (filters.category) {
@@ -68,14 +88,14 @@ export function StockProvider({ children }) {
       }
       
       if (filters.minStock) {
-        productsData = productsData.filter(product => product.quantity <= product.minStock);
+        productsData = productsData.filter(product => product.stock <= product.minStock);
       }
       
       if (filters.searchTerm) {
         const term = filters.searchTerm.toLowerCase();
         productsData = productsData.filter(product => 
           product.name.toLowerCase().includes(term) || 
-          product.id.toLowerCase().includes(term) ||
+          (product.code && product.code.toLowerCase().includes(term)) ||
           (product.lotNumber && product.lotNumber.toLowerCase().includes(term))
         );
       }
@@ -197,21 +217,35 @@ export function StockProvider({ children }) {
     }
   }, []);
 
-  // Añadir un producto
+  // Añadir un producto - CORREGIDO
   const addProduct = useCallback(async (productData) => {
     try {
       setError('');
       
+      console.log('addProduct - Datos recibidos:', productData); // Debug
+      
       // Preparar datos para Firestore
       const dbProductData = {
         name: productData.name,
+        code: productData.code,
         category: productData.category,
-        quantity: productData.quantity || 0,
-        minStock: productData.minStock || 0,
-        unitOfMeasure: productData.unitOfMeasure || 'unidad',
+        storageType: productData.storageType,
+        unit: productData.unit,
+        stock: Number(productData.stock) || 0, // CORREGIDO: usar 'stock' y asegurar conversión
+        minStock: Number(productData.minStock) || 0,
         lotNumber: productData.lotNumber || null,
+        storageConditions: productData.storageConditions || null,
+        dimensions: productData.dimensions || null,
+        supplierCode: productData.supplierCode || null,
+        cost: productData.cost ? Number(productData.cost) : null,
+        supplierName: productData.supplierName || null,
+        supplierContact: productData.supplierContact || null,
+        tags: productData.tags || [],
         notes: productData.notes || null,
-        warehouseStock: productData.warehouseStock || {},
+        fieldId: productData.fieldId || null,
+        warehouseId: productData.warehouseId || null,
+        lotId: productData.lotId || null,
+        storageLevel: productData.storageLevel || 'field',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -222,6 +256,8 @@ export function StockProvider({ children }) {
           dbProductData.expiryDate = Timestamp.fromDate(productData.expiryDate);
         }
       }
+      
+      console.log('addProduct - Datos a guardar:', dbProductData); // Debug
       
       // Insertar producto en Firestore
       const productRef = await addDoc(collection(db, 'products'), dbProductData);
@@ -237,7 +273,7 @@ export function StockProvider({ children }) {
     }
   }, [loadProducts]);
 
-  // Actualizar un producto
+  // Actualizar un producto - CORREGIDO
   const updateProduct = useCallback(async (productId, productData) => {
     try {
       setError('');
@@ -245,13 +281,25 @@ export function StockProvider({ children }) {
       // Preparar datos para actualizar
       const updateData = {
         name: productData.name,
+        code: productData.code,
         category: productData.category,
-        quantity: productData.quantity,
-        minStock: productData.minStock,
-        unitOfMeasure: productData.unitOfMeasure,
+        storageType: productData.storageType,
+        unit: productData.unit,
+        stock: Number(productData.stock) || 0, // CORREGIDO: usar 'stock' y asegurar conversión
+        minStock: Number(productData.minStock) || 0,
         lotNumber: productData.lotNumber,
+        storageConditions: productData.storageConditions,
+        dimensions: productData.dimensions,
+        supplierCode: productData.supplierCode,
+        cost: productData.cost ? Number(productData.cost) : null,
+        supplierName: productData.supplierName,
+        supplierContact: productData.supplierContact,
+        tags: productData.tags || [],
         notes: productData.notes,
-        warehouseStock: productData.warehouseStock || {},
+        fieldId: productData.fieldId,
+        warehouseId: productData.warehouseId,
+        lotId: productData.lotId,
+        storageLevel: productData.storageLevel,
         updatedAt: serverTimestamp()
       };
       
@@ -341,50 +389,6 @@ export function StockProvider({ children }) {
     deleteProduct,
     loadWarehouses,
     loadFields,
-    
-    // Funciones para almacenes
-    addWarehouse: async (warehouseData) => {
-      try {
-        setError('');
-        const newWarehouseRef = await addDoc(collection(db, 'warehouses'), {
-          ...warehouseData,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-        await loadWarehouses();
-        return newWarehouseRef.id;
-      } catch (error) {
-        setError('Error al crear almacén: ' + error.message);
-        throw error;
-      }
-    },
-    
-    updateWarehouse: async (warehouseId, warehouseData) => {
-      try {
-        setError('');
-        await updateDoc(doc(db, 'warehouses', warehouseId), {
-          ...warehouseData,
-          updatedAt: serverTimestamp()
-        });
-        await loadWarehouses();
-        return warehouseId;
-      } catch (error) {
-        setError('Error al actualizar almacén: ' + error.message);
-        throw error;
-      }
-    },
-    
-    deleteWarehouse: async (warehouseId) => {
-      try {
-        setError('');
-        await deleteDoc(doc(db, 'warehouses', warehouseId));
-        await loadWarehouses();
-        return true;
-      } catch (error) {
-        setError('Error al eliminar almacén: ' + error.message);
-        throw error;
-      }
-    },
     
     // Funciones para almacenes
     addWarehouse: async (warehouseData) => {

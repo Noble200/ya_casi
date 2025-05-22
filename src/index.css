@@ -11,7 +11,7 @@
 @import './styles/forms.css';
 @import './styles/alerts.css';
 @import './styles/tables.css';
-@import './styles/select-fix.css'; /* Solución para selectores */
+@import './styles/select-fix.css';
 
 /* Componentes de layout */
 @import './components/layout/AppLayout/appLayout.css';
@@ -23,6 +23,7 @@
 @import './components/panels/Dashboard/dashboard.css';
 @import './components/panels/Harvests/harvests.css';
 @import './components/panels/Fields/fields.css';
+@import './components/panels/Products/products.css';
 
 /* Importar Font Awesome para iconos (CDN) */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
