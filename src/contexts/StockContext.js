@@ -8,6 +8,7 @@ import {
   doc, 
   query, 
   orderBy,
+  where,
   serverTimestamp,
   Timestamp 
 } from 'firebase/firestore';
@@ -91,33 +92,62 @@ export function StockProvider({ children }) {
   }, []);
 
   // Cargar almacenes
-  const loadWarehouses = useCallback(async () => {
+  const loadWarehouses = useCallback(async (filters = {}) => {
     try {
       setLoading(true);
       setError('');
       
+      // Crear consulta base
       const warehousesQuery = query(collection(db, 'warehouses'), orderBy('name'));
       const querySnapshot = await getDocs(warehousesQuery);
       
-      const warehousesData = [];
+      // Mapear documentos a objetos de almacenes
+      let warehousesData = [];
       querySnapshot.forEach((doc) => {
         const warehouseData = doc.data();
         warehousesData.push({
           id: doc.id,
-          name: warehouseData.name,
-          location: warehouseData.location,
-          type: warehouseData.type,
-          fieldId: warehouseData.fieldId,
-          storageCondition: warehouseData.storageCondition,
-          capacity: warehouseData.capacity,
-          capacityUnit: warehouseData.capacityUnit,
-          supervisor: warehouseData.supervisor,
-          notes: warehouseData.notes,
-          status: warehouseData.status,
+          name: warehouseData.name || '',
+          type: warehouseData.type || 'shed',
+          location: warehouseData.location || '',
+          fieldId: warehouseData.fieldId || '',
+          lotId: warehouseData.lotId || '',
+          isFieldLevel: warehouseData.isFieldLevel !== undefined ? warehouseData.isFieldLevel : true,
+          status: warehouseData.status || 'active',
+          capacity: warehouseData.capacity || 0,
+          capacityUnit: warehouseData.capacityUnit || 'ton',
+          storageCondition: warehouseData.storageCondition || 'normal',
+          temperature: warehouseData.temperature || null,
+          humidity: warehouseData.humidity || null,
+          supervisor: warehouseData.supervisor || '',
+          description: warehouseData.description || '',
+          notes: warehouseData.notes || '',
           createdAt: warehouseData.createdAt,
           updatedAt: warehouseData.updatedAt
         });
       });
+      
+      // Aplicar filtros si se proporcionan
+      if (filters.status) {
+        warehousesData = warehousesData.filter(warehouse => warehouse.status === filters.status);
+      }
+      
+      if (filters.type) {
+        warehousesData = warehousesData.filter(warehouse => warehouse.type === filters.type);
+      }
+      
+      if (filters.fieldId) {
+        warehousesData = warehousesData.filter(warehouse => warehouse.fieldId === filters.fieldId);
+      }
+      
+      if (filters.searchTerm) {
+        const term = filters.searchTerm.toLowerCase();
+        warehousesData = warehousesData.filter(warehouse => 
+          warehouse.name.toLowerCase().includes(term) || 
+          (warehouse.description && warehouse.description.toLowerCase().includes(term)) ||
+          (warehouse.location && warehouse.location.toLowerCase().includes(term))
+        );
+      }
       
       setWarehouses(warehousesData);
       return warehousesData;
@@ -311,6 +341,50 @@ export function StockProvider({ children }) {
     deleteProduct,
     loadWarehouses,
     loadFields,
+    
+    // Funciones para almacenes
+    addWarehouse: async (warehouseData) => {
+      try {
+        setError('');
+        const newWarehouseRef = await addDoc(collection(db, 'warehouses'), {
+          ...warehouseData,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        await loadWarehouses();
+        return newWarehouseRef.id;
+      } catch (error) {
+        setError('Error al crear almacén: ' + error.message);
+        throw error;
+      }
+    },
+    
+    updateWarehouse: async (warehouseId, warehouseData) => {
+      try {
+        setError('');
+        await updateDoc(doc(db, 'warehouses', warehouseId), {
+          ...warehouseData,
+          updatedAt: serverTimestamp()
+        });
+        await loadWarehouses();
+        return warehouseId;
+      } catch (error) {
+        setError('Error al actualizar almacén: ' + error.message);
+        throw error;
+      }
+    },
+    
+    deleteWarehouse: async (warehouseId) => {
+      try {
+        setError('');
+        await deleteDoc(doc(db, 'warehouses', warehouseId));
+        await loadWarehouses();
+        return true;
+      } catch (error) {
+        setError('Error al eliminar almacén: ' + error.message);
+        throw error;
+      }
+    },
     
     // Funciones para almacenes
     addWarehouse: async (warehouseData) => {
