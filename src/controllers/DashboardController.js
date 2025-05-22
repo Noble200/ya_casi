@@ -43,11 +43,21 @@ const useDashboardController = () => {
   
   // Calcular estadísticas y listas filtradas
   const processData = useCallback(() => {
-    // Calcular productos con stock bajo
+    console.log('Procesando datos del dashboard...'); // Debug
+    console.log('Productos disponibles:', products.length); // Debug
+    
+    // Calcular productos con stock bajo - CORREGIDO
     const lowStock = products.filter(product => {
-      const totalStock = Object.values(product.warehouseStock || {}).reduce((sum, stock) => sum + stock, 0);
-      return totalStock <= (product.minStock || 0) && product.minStock > 0;
+      // Usar directamente el campo 'stock' del producto
+      const currentStock = product.stock || 0;
+      const minStock = product.minStock || 0;
+      
+      console.log(`Producto: ${product.name}, Stock actual: ${currentStock}, Stock mínimo: ${minStock}`); // Debug
+      
+      return currentStock <= minStock && minStock > 0;
     }).slice(0, 5);
+    
+    console.log('Productos con stock bajo encontrados:', lowStock.length); // Debug
     
     // Calcular productos próximos a vencer
     const currentDate = new Date();
@@ -145,6 +155,13 @@ const useDashboardController = () => {
       pendingFumigationsCount: pendingFumigs.length,
       upcomingHarvestsCount: upcoming.length
     });
+    
+    console.log('Estadísticas actualizadas:', {
+      totalProducts: products.length,
+      lowStockCount: lowStock.length,
+      expiringCount: expiringSoon.length
+    }); // Debug
+    
   }, [products, warehouses, transfers, fumigations, harvests]);
   
   // Función para obtener el nombre de un almacén por ID
